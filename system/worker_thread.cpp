@@ -48,86 +48,6 @@ void WorkerThread::setup() {
   _thd_txn_id = 0;
 }
 
-void WorkerThread::fakeprocess(Message * msg) {
-  RC rc __attribute__ ((unused));
-
-  DEBUG("%ld Processing %ld %d\n",get_thd_id(),msg->get_txn_id(),msg->get_rtype());
-  assert(msg->get_rtype() == CL_QRY || msg->get_rtype() == CL_QRY_O || msg->get_txn_id() != UINT64_MAX);
-  uint64_t starttime = get_sys_clock();
-		switch(msg->get_rtype()) {
-			case RPASS:
-        //rc = process_rpass(msg);
-				break;
-			case RPREPARE:
-        rc = RCOK;
-        txn_man->set_rc(rc);
-        msg_queue.enqueue(get_thd_id(),Message::create_message(txn_man,RACK_PREP),msg->return_node_id);
-				break;
-			case RFWD:
-        rc = process_rfwd(msg);
-				break;
-			case RQRY:
-        rc = RCOK;
-        txn_man->set_rc(rc);
-        msg_queue.enqueue(get_thd_id(),Message::create_message(txn_man,RQRY_RSP),msg->return_node_id);
-				break;
-			case RQRY_CONT:
-        rc = RCOK;
-        txn_man->set_rc(rc);
-        msg_queue.enqueue(get_thd_id(),Message::create_message(txn_man,RQRY_RSP),msg->return_node_id);
-				break;
-			case RQRY_RSP:
-        rc = process_rqry_rsp(msg);
-				break;
-			case RFIN:
-        rc = RCOK;
-        txn_man->set_rc(rc);
-        if(!((FinishMessage*)msg)->readonly || CC_ALG == MAAT || CC_ALG == OCC || CC_ALG == TICTOC || CC_ALG == BOCC || CC_ALG == SSI)
-        // if(!((FinishMessage*)msg)->readonly || CC_ALG == MAAT || CC_ALG == OCC)
-          msg_queue.enqueue(get_thd_id(),Message::create_message(txn_man,RACK_FIN),GET_NODE_ID(msg->get_txn_id()));
-        // rc = process_rfin(msg);
-				break;
-			case RACK_PREP:
-        rc = process_rack_prep(msg);
-				break;
-			case RACK_FIN:
-        rc = process_rack_rfin(msg);
-				break;
-			case RTXN_CONT:
-        rc = process_rtxn_cont(msg);
-				break;
-      case CL_QRY:
-      case CL_QRY_O:
-			case RTXN:
-#if CC_ALG == CALVIN
-        rc = process_calvin_rtxn(msg);
-#else
-        rc = process_rtxn(msg);
-#endif
-				break;
-			case LOG_FLUSHED:
-        rc = process_log_flushed(msg);
-				break;
-			case LOG_MSG:
-        rc = process_log_msg(msg);
-				break;
-			case LOG_MSG_RSP:
-        rc = process_log_msg_rsp(msg);
-				break;
-			default:
-        printf("Msg: %d\n",msg->get_rtype());
-        fflush(stdout);
-				assert(false);
-				break;
-		}
-  uint64_t timespan = get_sys_clock() - starttime;
-  INC_STATS(get_thd_id(),worker_process_cnt,1);
-  INC_STATS(get_thd_id(),worker_process_time,timespan);
-  INC_STATS(get_thd_id(),worker_process_cnt_by_type[msg->rtype],1);
-  INC_STATS(get_thd_id(),worker_process_time_by_type[msg->rtype],timespan);
-  DEBUG("%ld EndProcessing %d %ld\n",get_thd_id(),msg->get_rtype(),msg->get_txn_id());
-}
-
 void WorkerThread::statqueue(uint64_t thd_id, Message * msg, uint64_t starttime) {
   if (msg->rtype == RTXN_CONT ||
       msg->rtype == RQRY_RSP || msg->rtype == RACK_PREP  ||
@@ -452,11 +372,8 @@ RC WorkerThread::run() {
       }
       txn_man->register_thread(this);
     }
-#ifdef FAKE_PROCESS
-    fakeprocess(msg);
-#else
+
     process(msg);
-#endif
     // process(msg);  /// DA
     ready_starttime = get_sys_clock();
     if(txn_man) {

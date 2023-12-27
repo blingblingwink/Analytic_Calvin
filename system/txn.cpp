@@ -704,10 +704,9 @@ void TxnManager::commit_stats() {
 	DEBUG("Commit_stats execute_time %ld warmup_time %ld\n",warmuptime,g_warmup_timer);
 	if (simulation->is_warmup_done())
 		DEBUG("Commit_stats total_txn_commit_cnt %ld\n",stats._stats[get_thd_id()]->total_txn_commit_cnt);
-	if(!IS_LOCAL(get_txn_id()) && CC_ALG != CALVIN) {
+	if(!IS_LOCAL(get_txn_id())) {
 		INC_STATS(get_thd_id(),remote_txn_commit_cnt,1);
-		txn_stats.commit_stats(get_thd_id(), get_txn_id(), get_batch_id(), timespan_long,
-													 timespan_short);
+		txn_stats.commit_stats(get_thd_id(), get_txn_id(), get_batch_id(), timespan_long, timespan_short);
 		return;
 	}
 

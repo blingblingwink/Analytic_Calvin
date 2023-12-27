@@ -3,8 +3,6 @@ from experiments import configs
 from collections import OrderedDict
 #from experiments import config_names
 import glob
-import pprint
-import latency_stats as ls
 import itertools
 
 CONFIG_PARAMS = [
@@ -812,36 +810,6 @@ def get_summary(sfile,summary={}):
 #    print("Added progress: " + str(len(prog)))
     return summary
 
-def get_network_stats(n_file):
-    setup = n_file.split("/")[-1].split("_")
-
-    # A few checks
-    assert setup[0] == "0" # The corresponding file contains no info
-    assert setup[3] == "NETWORK"
-
-    # What to call the participating pair of nodes
-    node_names = {}
-    node_names['n0']=setup[1]
-    node_names['n1']=setup[2]
-
-    with open(n_file,'r') as f:
-        lines = f.readlines()
-
-    stats = {}
-    for line in lines:
-        if line.startswith('0:') or line.startswith('1:'):
-            assert line.strip()[-3:] in node_names.values()
-        elif line.startswith("Network Bytes:"):
-            metadata = {}
-            metadata.update(node_names.copy())
-            num_msg_bytes=line.split(":")[1].strip()
-            metadata["bytes"]=num_msg_bytes
-        elif line.startswith('ns:'):
-            lat_str = line.split(":")[1].strip()
-            latencies = lat_str.split(" ")
-            latencies = list(map(int,latencies))
-            stats[metadata["bytes"]] = ls.LatencyStats(latencies,metadata)
-    return stats
 
 def merge(summary,tmp):
     merge_helper(summary,tmp)
@@ -996,13 +964,6 @@ def process_lats(summary,line,name):
             summary[name].append(float(r))
         except:
             pass
-
-def get_lstats(summary):
-    try:
-        latencies = summary['all_lat']
-        summary['all_lat']=ls.LatencyStats(latencies,out_time_unit='ms')
-    except:
-        pass
 
 def get_args(fmt,exp):
     cfgs = get_cfgs(fmt,exp)

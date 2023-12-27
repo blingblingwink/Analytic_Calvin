@@ -69,15 +69,9 @@ def pps_scaling():
 
 def ycsb_scaling():
     wl = 'YCSB'
-    #nnodes = [1,2,4,8,16,32,64]
-    #nnodes = [1,2,4,8,16,32]
     nnodes = [2]
-	  # algos=['WOOKONG','WAIT_DIE','MVCC','MAAT','TIMESTAMP','OCC']
-    # algos=['MVCC','MAAT','TIMESTAMP','WOOKONG','OCC']
-    # algos=['MAAT','MVCC','TIMESTAMP','OCC','DLI_DTA3','DLI_OCC']
-    algos=['CNULL']
+    algos=['CALVIN']
     base_table_size=1048576*8
-    #base_table_size=2097152*8
     txn_write_perc = [0.0]
     tup_write_perc = [0.0]
     load = [10000]
@@ -85,13 +79,11 @@ def ycsb_scaling():
     ctcnt = [4]
     scnt = [2]
     rcnt = [2]
-    skew = [0.0]
-    #skew = [0.0,0.5,0.9]
+    skew = [0.5]
     fmt = ["WORKLOAD","NODE_CNT","CC_ALG","SYNTH_TABLE_SIZE","TUP_WRITE_PERC","TXN_WRITE_PERC","MAX_TXN_IN_FLIGHT","ZIPF_THETA","THREAD_CNT","CLIENT_THREAD_CNT","SEND_THREAD_CNT","REM_THREAD_CNT","CLIENT_SEND_THREAD_CNT","CLIENT_REM_THREAD_CNT"]
-    exp = [[wl,n,algo,base_table_size*n,tup_wr_perc,txn_wr_perc,ld,sk,thr,cthr,sthr,rthr,sthr,rthr] for thr,cthr,sthr,rthr,txn_wr_perc,tup_wr_perc,sk,ld,n,algo in itertools.product(tcnt,ctcnt,scnt,rcnt,txn_write_perc,tup_write_perc,skew,load,nnodes,algos)]
-    #txn_write_perc = [0.0]
-    #skew = [0.0]
-    #exp = exp + [[wl,n,algo,base_table_size*n,tup_wr_perc,txn_wr_perc,ld,sk,thr] for thr,txn_wr_perc,tup_wr_perc,sk,ld,n,algo in itertools.product(tcnt,txn_write_perc,tup_write_perc,skew,load,nnodes,algos)]
+    exp = [[wl,n,algo,base_table_size*n,tup_wr_perc,txn_wr_perc,ld,sk,thr,cthr,sthr,rthr,sthr,rthr] \
+           for thr,cthr,sthr,rthr,txn_wr_perc,tup_wr_perc,sk,ld,n,algo in \
+           itertools.product(tcnt,ctcnt,scnt,rcnt,txn_write_perc,tup_write_perc,skew,load,nnodes,algos)]
     return fmt,exp
 
 def ycsb_scaling1():
@@ -443,20 +435,17 @@ def ycsb_partitions_distr():
 
 def tpcc_scaling():
     wl = 'TPCC'
-    nnodes = [1]
-    # nalgos=['NO_WAIT','WAIT_DIE','MAAT','MVCC','TIMESTAMP','CALVIN','WOOKONG']
-    nalgos=['NO_WAIT','WAIT_DIE','MAAT','MVCC','TIMESTAMP','OCC','CALVIN','WOOKONG','TICTOC','DLI_DTA','DLI_DTA1','DLI_DTA2','DLI_DTA3','DLI_MVCC_OCC','DLI_MVCC']
-    # nalgos=['WOOKONG']
-    # nalgos=['NO_WAIT']
+    nnodes = [2]
+    nalgos=['CALVIN']
     npercpay=[0.0]
-    # npercpay=[0.0]
-    wh=128
-    # wh=64
-    load = [10000,20000,30000,40000,50000]
-    tcnt = [100]
-    ctcnt = [100]
+    num_wh=[8,16,32,64]
+    load = [10000]
+    tcnt = [16]
+    ctcnt = [4]
     fmt = ["WORKLOAD","NODE_CNT","CC_ALG","PERC_PAYMENT","NUM_WH","MAX_TXN_IN_FLIGHT","THREAD_CNT","CLIENT_THREAD_CNT"]
-    exp = [[wl,n,cc,pp,wh*n,tif,thr,cthr] for thr,cthr,tif,pp,n,cc in itertools.product(tcnt,ctcnt,load,npercpay,nnodes,nalgos)]
+    exp = [[wl,n,cc,pp,wh*n,tif,thr,cthr] \
+           for thr,cthr,tif,pp,n,cc,wh in \
+           itertools.product(tcnt,ctcnt,load,npercpay,nnodes,nalgos,num_wh)]
 
     # wh=4
     # exp = exp+[[wl,n,cc,pp,wh*n,tif] for tif,pp,n,cc in itertools.product(load,npercpay,nnodes,nalgos)]
@@ -837,7 +826,7 @@ configs = {
     "MAX_TXN_PER_PART" : 500000,
     "WORKLOAD" : "YCSB",
     "CC_ALG" : "WAIT_DIE",
-    "MPR" : 1.0,
+    "MPR" : 0.1,
     "TPORT_TYPE":"IPC",
     "TPORT_PORT":"18000",
     "PART_CNT": "NODE_CNT",
@@ -864,7 +853,7 @@ configs = {
     "ZIPF_THETA":0.3,
     "ACCESS_PERC":0.03,
     "DATA_PERC": 100,
-    "REQ_PER_QUERY": 1,
+    "REQ_PER_QUERY": 10,
     "SYNTH_TABLE_SIZE":"65536",
 #TPCC
     "NUM_WH": 'PART_CNT',
