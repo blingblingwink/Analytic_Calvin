@@ -54,16 +54,15 @@ RC CalvinLockThread::run() {
 			continue;
 		}
 		if(idle_starttime > 0) {
-				INC_STATS(_thd_id,sched_idle_time,get_sys_clock() - idle_starttime);
-				idle_starttime = 0;
+			INC_STATS(_thd_id,sched_idle_time,get_sys_clock() - idle_starttime);
+			idle_starttime = 0;
 		}
 
 		prof_starttime = get_sys_clock();
 		assert(msg->get_rtype() == CL_QRY || msg->get_rtype() == CL_QRY_O);
 		assert(msg->get_txn_id() != UINT64_MAX);
 
-		txn_man =
-				txn_table.get_transaction_manager(get_thd_id(), msg->get_txn_id(), msg->get_batch_id());
+		txn_man = txn_table.get_transaction_manager(get_thd_id(), msg->get_txn_id(), msg->get_batch_id());
 		while (!txn_man->unset_ready()) {
 		}
 		assert(ISSERVERN(msg->get_return_id()));
@@ -81,12 +80,16 @@ RC CalvinLockThread::run() {
 
 		rc = RCOK;
 		// Acquire locks
+#if WORKLOAD == PPS
 		if (!txn_man->isRecon()) {
-				rc = txn_man->acquire_locks();
+			rc = txn_man->acquire_locks();
 		}
+#else
+		rc = txn_man->acquire_locks();
+#endif
 
 		if(rc == RCOK) {
-				work_queue.enqueue(_thd_id,msg,false);
+			work_queue.enqueue(_thd_id,msg,false);
 		}
 		txn_man->set_ready();
 
@@ -131,8 +134,10 @@ RC CalvinSequencerThread::run() {
 		prof_starttime = get_sys_clock();
 
 		if(!msg) {
-			if (idle_starttime == 0) idle_starttime = get_sys_clock();
-				continue;
+			if (idle_starttime == 0) {
+				idle_starttime = get_sys_clock();
+			}
+			continue;
 		}
 		if(idle_starttime > 0) {
 			INC_STATS(_thd_id,seq_idle_time,get_sys_clock() - idle_starttime);

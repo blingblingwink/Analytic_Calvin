@@ -43,7 +43,7 @@ private:
   uint64_t size;
   std::vector<std::vector<BaseQuery*>> queries;
   uint64_t ** query_cnt;
-  volatile uint64_t next_tid;
+  uint64_t next_tid;
 };
 
 #endif

@@ -28,7 +28,7 @@ public:
 
 private:
 #if ATOMIC_WORD
-	volatile uint64_t	_tid_word;
+	uint64_t	_tid_word;
 #else
  	pthread_mutex_t * 	_latch;
 	ts_t 				_tid;

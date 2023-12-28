@@ -21,11 +21,11 @@
 
 class SimManager {
 public:
-	volatile bool sim_init_done;
-	volatile bool warmup;
-  volatile uint64_t warmup_end_time;
+	bool sim_init_done;
+	bool warmup;
+  uint64_t warmup_end_time;
 	bool start_set;
-	volatile bool sim_done;
+	bool sim_done;
   uint64_t run_starttime;
   uint64_t rsp_cnt;
   uint64_t seq_epoch;

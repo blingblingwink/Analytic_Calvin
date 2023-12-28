@@ -22,6 +22,8 @@
 #include "mem_alloc.h"
 #include "txn.h"
 
+#if CC_ALG == DTA
+
 void Row_dta::init(row_t* row) {
   _row = row;
   max_version_ = 1;
@@ -507,3 +509,5 @@ void Row_dta::update_buffer(TxnManager* txn) {
     return_req_entry(tofree);
   }
 }
+
+#endif

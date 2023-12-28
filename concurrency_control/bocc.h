@@ -45,7 +45,7 @@ public:
 	void init();
 	RC validate(TxnManager * txn);
 	void finish(RC rc, TxnManager * txn);
-	volatile bool lock_all;
+	bool lock_all;
 	uint64_t lock_txn_id;
 private:
 	// serial validation in the original OCC paper.
@@ -59,7 +59,7 @@ private:
 	b_set_ent * history;
 	uint64_t his_len;
 
-	volatile uint64_t tnc; // transaction number counter
+	uint64_t tnc; // transaction number counter
 	pthread_mutex_t latch;
  	sem_t 	_semaphore;
 };

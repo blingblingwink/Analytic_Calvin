@@ -22,6 +22,8 @@
 #include "mem_alloc.h"
 #include "row_maat.h"
 
+#if CC_ALG == MAAT
+
 void Maat::init() { sem_init(&_semaphore, 0, 1); }
 
 RC Maat::validate(TxnManager * txn) {
@@ -317,3 +319,5 @@ void TimeTable::set_state(uint64_t thd_id, uint64_t key, MAATState value) {
   }
   pthread_mutex_unlock(&table[idx].mtx);
 }
+
+#endif

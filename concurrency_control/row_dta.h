@@ -17,6 +17,8 @@
 #ifndef ROW_DTA_H
 #define ROW_DTA_H
 #include "../storage/row.h"
+
+#if CC_ALG == DTA
 class table_t;
 class Catalog;
 class TxnManager;
@@ -49,7 +51,7 @@ class Row_dta {
   void write(row_t* data);
 
  private:
-  volatile bool dta_avail;
+  bool dta_avail;
   uint64_t max_version_;
   row_t* _row;
 
@@ -90,5 +92,7 @@ class Row_dta {
   uint64_t rreq_len;
   uint64_t preq_len;
 };
+
+#endif
 
 #endif

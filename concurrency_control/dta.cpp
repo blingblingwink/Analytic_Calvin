@@ -24,6 +24,8 @@
 #include "dli.h"
 #include "row_dta.h"
 
+#if CC_ALG == DTA
+
 void get_rw_set(TxnManager* txn, std::list<dta_item>& rset, std::list<dta_item>& wset) {
   uint64_t len = txn->get_access_cnt();
   for (uint64_t i = 0; i < len; i++) {
@@ -68,7 +70,6 @@ void Dta::finish(RC rc, TxnManager* txn) {
 }
 RC Dta::validate(TxnManager* txn) {
   RC rc = RCOK;
-#if CC_ALG == DTA
   uint64_t start_time = get_sys_clock();
   uint64_t timespan;
   sem_wait(&_semaphore);
@@ -180,7 +181,6 @@ FINISH:
 
   DEBUG("DTA Validate End %ld: %d [%lu,%lu]\n", txn->get_txn_id(), rc == RCOK, lower, upper);
   sem_post(&_semaphore);
-#endif
   return rc;
 }
 
@@ -210,7 +210,6 @@ RC Dta::get_rw_set(TxnManager* txn, dta_set_ent*& rset, dta_set_ent*& wset) {
 
 RC Dta::find_bound(TxnManager* txn) {
   RC rc = RCOK;
-#if CC_ALG == DTA
   uint64_t lower = dta_time_table.get_lower(txn->get_thd_id(), txn->get_txn_id());
   uint64_t upper = dta_time_table.get_upper(txn->get_thd_id(), txn->get_txn_id());
   if (lower >= upper) {
@@ -224,7 +223,6 @@ RC Dta::find_bound(TxnManager* txn) {
   }
   DEBUG("DTA Bound %ld: %d [%lu,%lu] %lu\n", txn->get_txn_id(), rc, lower, upper,
         txn->commit_timestamp);
-#endif
   return rc;
 }
 
@@ -355,3 +353,5 @@ void DtaTimeTable::set_state(uint64_t thd_id, uint64_t key, DTAState value) {
   }
   pthread_mutex_unlock(&table[idx].mtx);
 }
+
+#endif

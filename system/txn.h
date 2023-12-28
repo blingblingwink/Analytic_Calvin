@@ -190,16 +190,16 @@ public:
 		assert(CC_ALG == CALVIN || !recon);
 		return recon;
 	};
-		bool recon;
+	bool recon;
 
-	row_t * volatile cur_row;
+	row_t * cur_row;
 	// [DL_DETECT, NO_WAIT, WAIT_DIE]
-	int volatile   lock_ready;
+	int   lock_ready;
 	// [TIMESTAMP, MVCC]
-	bool volatile   ts_ready;
+	bool   ts_ready;
 	// [HSTORE, HSTORE_SPEC]
-	int volatile    ready_part;
-	int volatile    ready_ulk;
+	int    ready_part;
+	int    ready_ulk;
 
 #if CC_ALG == SILO
 	ts_t 			last_tid;
@@ -231,22 +231,27 @@ public:
 	uint64_t get_batch_id() {return txn->batch_id;}
 	void set_batch_id(uint64_t batch_id) {txn->batch_id = batch_id;}
 
-		// For MaaT
 	uint64_t commit_timestamp;
 	uint64_t get_commit_timestamp() {return commit_timestamp;}
 	void set_commit_timestamp(uint64_t timestamp) {commit_timestamp = timestamp;}
+
+	// For MaaT
+#if CC_ALG == MAAT
 	uint64_t greatest_write_timestamp;
 	uint64_t greatest_read_timestamp;
 	std::set<uint64_t> * uncommitted_reads;
 	std::set<uint64_t> * uncommitted_writes;
 	std::set<uint64_t> * uncommitted_writes_y;
+#endif
 
 	uint64_t twopl_wait_start;
 
+
 	// For Tictoc
+#if CC_ALG == TICTOC
 	uint64_t _min_commit_ts;
 	uint64_t _max_commit_ts;
-	volatile uint32_t _num_lock_waits;
+	uint32_t _num_lock_waits;
 	bool _signal_abort;
 	bool _is_sub_txn;
 
@@ -257,6 +262,7 @@ public:
 	uint64_t _lock_acquire_time;
 	uint64_t _lock_acquire_time_commit;
 	uint64_t _lock_acquire_time_abort;
+#endif
 	////////////////////////////////
 	// LOGGING
 	////////////////////////////////
@@ -282,7 +288,7 @@ public:
 	bool set_ready() {return ATOM_CAS(txn_ready,0,1);}
 	bool unset_ready() {return ATOM_CAS(txn_ready,1,0);}
 	bool is_ready() {return txn_ready == true;}
-	volatile int txn_ready;
+	int txn_ready;
 	// Calvin
 	uint32_t lock_ready_cnt;
 	uint32_t calvin_expected_rsp_cnt;

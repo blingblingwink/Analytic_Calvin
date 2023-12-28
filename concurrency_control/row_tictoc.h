@@ -1,8 +1,6 @@
 #pragma once
 
 #include "global.h"
-#ifndef ROW_TICTOC_H
-#define ROW_TICTOC_H
 
 #if WRITE_PERMISSION_LOCK
 
@@ -18,6 +16,8 @@
 #define LOCK_BIT (1UL << 63)
 
 #endif
+
+#if CC_ALG == TICTOC
 
 class TxnManager;
 

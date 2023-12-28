@@ -50,14 +50,14 @@ public:
 	void 	 		update_epoch();
 private:
 	// For SILO
-	volatile uint64_t * _epoch;
+	uint64_t * _epoch;
 	ts_t * 			_last_epoch_update_time;
 
 	pthread_mutex_t ts_mutex;
 	uint64_t 		timestamp;
 	pthread_mutex_t mutexes[BUCKET_CNT];
 	uint64_t 		hash(row_t * row);
-	ts_t * volatile all_ts;
+	ts_t * all_ts;
 	TxnManager ** 		_all_txns;
 	ts_t			last_min_ts_time;
 	ts_t			min_ts;

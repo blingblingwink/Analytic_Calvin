@@ -22,6 +22,7 @@
 #include "helper.h"
 #include "tictoc.h"
 
+#if CC_ALG == TICTOC
 
 #if OCC_LOCK_TYPE == WAIT_DIE || OCC_WAW_LOCK
 bool
@@ -500,5 +501,4 @@ Row_tictoc::renew(ts_t wts, ts_t rts, ts_t &new_rts) // Renew without lock check
 
 }
 
-
-
+#endif

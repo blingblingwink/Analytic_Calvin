@@ -122,7 +122,7 @@ public:
   void copy_remote_items(PPSQueryMessage * msg);
 private:
 	PPSWorkload * _wl;
-	volatile RC _rc;
+	RC _rc;
   row_t * row;
 
   uint64_t parts_processed_count;

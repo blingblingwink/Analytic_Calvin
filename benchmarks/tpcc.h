@@ -85,7 +85,7 @@ public:
 	// For delivary. Only one txn can be delivering a warehouse at a time.
 	// *_delivering[warehouse_id] -> the warehouse is delivering.
 	bool ** delivering;
-//	bool volatile ** delivering;
+//	bool ** delivering;
 
 private:
 	uint64_t num_wh;
@@ -132,7 +132,7 @@ public:
   void copy_remote_items(TPCCQueryMessage * msg);
 private:
 	TPCCWorkload * _wl;
-	volatile RC _rc;
+	RC _rc;
   row_t * row;
 
   uint64_t next_item_id;

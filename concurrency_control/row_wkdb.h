@@ -17,6 +17,8 @@
 #ifndef ROW_WKDB_H
 #define ROW_WKDB_H
 
+#if CC_ALG == WOOKONG
+
 class table_t;
 class Catalog;
 class TxnManager;
@@ -47,7 +49,7 @@ public:
 	RC commit(access_t type, TxnManager * txn, row_t * data);
 	void write(row_t * data);
 
-	volatile bool wkdb_avail;
+	bool wkdb_avail;
 
 private:
 	row_t * _row;
@@ -86,4 +88,5 @@ private:
 
 };
 
+#endif
 #endif

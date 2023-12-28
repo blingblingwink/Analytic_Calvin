@@ -44,7 +44,7 @@ public:
 	void init();
 	RC validate(TxnManager * txn);
 	void finish(RC rc, TxnManager * txn);
-	volatile bool lock_all;
+	bool lock_all;
 	uint64_t lock_txn_id;
 
  private:
@@ -63,7 +63,7 @@ public:
 	set_ent * active;
 	uint64_t his_len;
 	uint64_t active_len;
-	volatile uint64_t tnc; // transaction number counter
+	uint64_t tnc; // transaction number counter
 	pthread_mutex_t latch;
  	sem_t 	_semaphore;
 };

@@ -149,8 +149,8 @@ extern RtsCache wkdb_rts_cache;
 
 extern map<string, string> g_params;
 
-extern bool volatile warmup_done;
-extern bool volatile enable_thread_mem_pool;
+extern bool warmup_done;
+extern bool enable_thread_mem_pool;
 extern pthread_barrier_t warmup_bar;
 
 /******************************************/
@@ -167,7 +167,7 @@ extern UInt32 g_server_start_node;
 /******************************************/
 // Global Parameter
 /******************************************/
-extern volatile UInt64 g_row_id;
+extern UInt64 g_row_id;
 extern bool g_part_alloc;
 extern bool g_mem_pad;
 extern bool g_prt_lat_distr;

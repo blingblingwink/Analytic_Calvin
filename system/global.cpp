@@ -112,8 +112,8 @@ bool abort_history;
 ofstream commit_file;
 ofstream abort_file;
 
-bool volatile warmup_done = false;
-bool volatile enable_thread_mem_pool = false;
+bool warmup_done = false;
+bool enable_thread_mem_pool = false;
 pthread_barrier_t warmup_bar;
 
 ts_t g_abort_penalty = ABORT_PENALTY;
@@ -130,7 +130,7 @@ int32_t g_load_per_server = LOAD_PER_SERVER;
 
 bool g_hw_migrate = HW_MIGRATE;
 
-volatile UInt64 g_row_id = 0;
+UInt64 g_row_id = 0;
 bool g_part_alloc = PART_ALLOC;
 bool g_mem_pad = MEM_PAD;
 UInt32 g_cc_alg = CC_ALG;

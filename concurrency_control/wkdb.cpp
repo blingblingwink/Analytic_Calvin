@@ -23,6 +23,8 @@
 #include "mem_alloc.h"
 #include "row_wkdb.h"
 
+#if CC_ALG == WOOKONG
+
 wkdb_set_ent::wkdb_set_ent() {
 	set_size = 0;
 	txn = NULL;
@@ -35,8 +37,6 @@ void Wkdb::init() {
 }
 
 RC Wkdb::validate(TxnManager * txn) {
-
-#if CC_ALG == WOOKONG
 
   uint64_t start_time = get_sys_clock();
   uint64_t timespan;
@@ -189,19 +189,16 @@ RC Wkdb::get_rw_set(TxnManager * txn, wkdb_set_ent * &rset, wkdb_set_ent *& wset
 	assert(n == wset->set_size);
 	assert(m == rset->set_size);
 
-#endif
 	return RCOK;
 }
 
 RC Wkdb::free_rw_set(TxnManager * txn, wkdb_set_ent * &rset, wkdb_set_ent *& wset) {
-#if CC_ALG == WOOKONG
 	wset->set_size = txn->get_write_set_size();
 	rset->set_size = txn->get_read_set_size();
   mem_allocator.free(wset->rows, sizeof(row_t *) * wset->set_size);
   mem_allocator.free(rset->rows, sizeof(row_t *) * rset->set_size);
   mem_allocator.free(wset, sizeof(wkdb_set_ent));
   mem_allocator.free(rset, sizeof(wkdb_set_ent));
-#endif
 	return RCOK;
 }
 
@@ -354,3 +351,5 @@ void WkdbTimeTable::set_state(uint64_t thd_id, uint64_t key, WKDBState value) {
   }
   pthread_mutex_unlock(&table[idx].mtx);
 }
+
+#endif

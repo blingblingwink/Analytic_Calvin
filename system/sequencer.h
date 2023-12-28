@@ -19,7 +19,8 @@
 
 #include "global.h"
 #include "query.h"
-#include <boost/lockfree/queue.hpp>
+#include <queue>
+#include <vector>
 
 class Workload;
 class BaseQuery;
@@ -60,7 +61,7 @@ class Sequencer {
  private:
 	void reset_participating_nodes(bool * part_nodes);
 
-	boost::lockfree::queue<Message*, boost::lockfree::capacity<65526> > * fill_queue;
+	vector<queue<Message*>> fill_queue;
 #if WORKLOAD == YCSB
 	YCSBQuery* node_queries;
 #elif WORKLOAD == TPCC
@@ -68,13 +69,13 @@ class Sequencer {
 #elif WORKLOAD == PPS
 	PPSQuery* node_queries;
 #endif
-	volatile uint64_t total_txns_finished;
-	volatile uint64_t total_txns_received;
-	volatile uint32_t rsp_cnt;
+	uint64_t total_txns_finished;
+	uint64_t total_txns_received;
+	uint32_t rsp_cnt;
 	uint64_t last_time_batch;
 	qlite_ll * wl_head;		// list of txns in batch being executed
 	qlite_ll * wl_tail;		// list of txns in batch being executed
-	volatile uint32_t next_txn_id;
+	uint32_t next_txn_id;
 	Workload * _wl;
 };
 

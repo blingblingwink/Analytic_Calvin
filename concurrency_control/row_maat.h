@@ -17,6 +17,8 @@
 #ifndef ROW_MAAT_H
 #define ROW_MAAT_H
 
+#if CC_ALG == MAAT
+
 class Row_maat {
 public:
 	void init(row_t * row);
@@ -29,7 +31,7 @@ public:
   void write(row_t * data);
 
 private:
-  volatile bool maat_avail;
+  bool maat_avail;
 
 	row_t * _row;
 
@@ -38,5 +40,8 @@ private:
   uint64_t timestamp_last_read;
   uint64_t timestamp_last_write;
 };
+
+
+#endif
 
 #endif

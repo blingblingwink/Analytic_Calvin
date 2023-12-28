@@ -5,7 +5,7 @@
 #define PAUSE usleep(1);
 
 struct QueueEntry {
-  volatile uintptr_t value; // the value stored in the entry. i.e., the pointer.
+  uintptr_t value; // the value stored in the entry. i.e., the pointer.
   QueueEntry * next;
 };
 
@@ -15,8 +15,8 @@ public:
   bool enqueue(uintptr_t value);
   bool dequeue(uintptr_t &value);
 private:
-  QueueEntry * volatile _head;
-  QueueEntry * volatile _tail;
+  QueueEntry * _head;
+  QueueEntry * _tail;
 };
 
 #endif

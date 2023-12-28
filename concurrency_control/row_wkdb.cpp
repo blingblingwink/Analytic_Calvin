@@ -23,6 +23,8 @@
 #include "helper.h"
 #include "wkdb.h"
 
+#if CC_ALG == WOOKONG
+
 void Row_wkdb::init(row_t * row) {
 	_row = row;
 
@@ -417,3 +419,4 @@ void Row_wkdb::update_buffer(TxnManager * txn) {
 	}
 }
 
+#endif

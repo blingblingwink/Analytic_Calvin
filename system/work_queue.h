@@ -115,8 +115,8 @@ private:
   uint64_t curr_epoch;
 
   sem_t 	_semaphore;
-  volatile uint64_t work_queue_size;
-  volatile uint64_t txn_queue_size;
+  uint64_t work_queue_size;
+  uint64_t txn_queue_size;
 
   uint64_t work_enqueue_size;
   uint64_t work_dequeue_size;

@@ -46,7 +46,7 @@ struct pool_node {
 public:
   txn_node_t head;
   txn_node_t tail;
-  volatile bool modify;
+  bool modify;
   uint64_t cnt;
   uint64_t min_ts;
 

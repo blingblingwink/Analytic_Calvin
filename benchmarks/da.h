@@ -52,7 +52,7 @@ class DATxnManager : public TxnManager {
 
  private:
   DAWorkload* _wl;
-  volatile RC _rc;
+  RC _rc;
   row_t* row;
 
   uint64_t next_item_id;

@@ -23,6 +23,9 @@
 #include "manager.h"
 #include "mem_alloc.h"
 #include "row_tictoc.h"
+
+#if CC_ALG == TICTOC
+
 bool Tictoc::_pre_abort = PRE_ABORT;
 
 RC Tictoc::get_rw_set(TxnManager * txn, tictoc_set_ent * &rset, tictoc_set_ent *& wset) {
@@ -381,3 +384,4 @@ Tictoc::set_txn_ready(RC rc, TxnManager * txn)
     }
 }
 
+#endif
