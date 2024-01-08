@@ -88,7 +88,7 @@ void Sequencer::process_ack(Message * msg, uint64_t thd_id) {
 		DAClientQueryMessage* cl_msg = (DAClientQueryMessage*)wait_list[id].msg;
 #endif
 #if WORKLOAD == PPS
-		if (WORKLOAD == PPS && CC_ALG == CALVIN &&
+		if ((CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN) &&
 				((cl_msg->txn_type == PPS_GETPARTBYSUPPLIER) ||
 				 (cl_msg->txn_type == PPS_GETPARTBYPRODUCT) || (cl_msg->txn_type == PPS_ORDERPRODUCT)) &&
 				(cl_msg->recon || ((AckMessage *)msg)->rc == Abort)) {
@@ -229,7 +229,7 @@ void Sequencer::process_txn(Message *msg, uint64_t thd_id, uint64_t early_start,
 	msg->return_node_id = g_node_id;
 	msg->lat_network_time = 0;
 	msg->lat_other_time = 0;
-#if CC_ALG == CALVIN && WORKLOAD == PPS
+#if (CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN) && WORKLOAD == PPS
 	PPSClientQueryMessage* cl_msg = (PPSClientQueryMessage*) msg;
 	if (cl_msg->txn_type == PPS_GETPARTBYSUPPLIER || cl_msg->txn_type == PPS_GETPARTBYPRODUCT ||
 					cl_msg->txn_type == PPS_ORDERPRODUCT) {

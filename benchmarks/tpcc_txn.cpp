@@ -68,7 +68,7 @@ RC TPCCTxnManager::run_txn() {
 	RC rc = RCOK;
 	uint64_t starttime = get_sys_clock();
 
-#if CC_ALG == CALVIN
+#if CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN
 	rc = run_calvin_txn();
 	return rc;
 #endif
@@ -122,7 +122,7 @@ bool TPCCTxnManager::is_done() {
 
 RC TPCCTxnManager::acquire_locks() {
 	uint64_t starttime = get_sys_clock();
-	assert(CC_ALG == CALVIN);
+	assert(CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN);
 	locking_done = false;
 	RC rc = RCOK;
 	RC rc2;
@@ -1059,7 +1059,7 @@ RC TPCCTxnManager::run_calvin_txn() {
 RC TPCCTxnManager::run_tpcc_phase2() {
 	TPCCQuery* tpcc_query = (TPCCQuery*) query;
 	RC rc = RCOK;
-	assert(CC_ALG == CALVIN);
+	assert(CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN);
 
 	uint64_t w_id = tpcc_query->w_id;
 	uint64_t d_id = tpcc_query->d_id;
@@ -1118,7 +1118,7 @@ RC TPCCTxnManager::run_tpcc_phase2() {
 RC TPCCTxnManager::run_tpcc_phase5() {
 	TPCCQuery* tpcc_query = (TPCCQuery*) query;
 	RC rc = RCOK;
-	assert(CC_ALG == CALVIN);
+	assert(CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN);
 
 	uint64_t w_id = tpcc_query->w_id;
 	uint64_t d_id = tpcc_query->d_id;

@@ -85,7 +85,7 @@ RC PPSTxnManager::run_txn() {
   RC rc = RCOK;
   uint64_t starttime = get_sys_clock();
 
-#if CC_ALG == CALVIN
+#if CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN
   rc = run_calvin_txn();
   return rc;
 #endif
@@ -129,7 +129,7 @@ bool PPSTxnManager::is_done() {
 
 RC PPSTxnManager::acquire_locks() {
   uint64_t starttime = get_sys_clock();
-  assert(CC_ALG == CALVIN);
+  assert(CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN);
   locking_done = false;
   RC rc = RCOK;
   RC rc2 = RCOK;
@@ -1070,7 +1070,7 @@ RC PPSTxnManager::run_pps_phase2() {
     bool part_loc = GET_NODE_ID(parts_to_partition(part_key)) == g_node_id;
     bool product_loc = GET_NODE_ID(products_to_partition(product_key)) == g_node_id;
     bool supplier_loc = GET_NODE_ID(suppliers_to_partition(supplier_key)) == g_node_id;
-    assert(CC_ALG == CALVIN);
+    assert(CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN);
 
 	switch (pps_query->txn_type) {
     case PPS_GETPART:
@@ -1202,7 +1202,7 @@ RC PPSTxnManager::run_pps_phase5() {
     bool part_loc = GET_NODE_ID(parts_to_partition(part_key)) == g_node_id;
     bool product_loc = GET_NODE_ID(products_to_partition(product_key)) == g_node_id;
     //bool supplier_loc = GET_NODE_ID(suppliers_to_partition(supplier_key)) == g_node_id;
-    assert(CC_ALG == CALVIN);
+    assert(CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN);
 
   switch (pps_query->txn_type) {
   case PPS_GETPART:

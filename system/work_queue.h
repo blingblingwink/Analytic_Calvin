@@ -93,20 +93,10 @@ public:
   uint64_t get_rem_wq_cnt() {return 0;}
   uint64_t get_new_wq_cnt() {return 0;}
   Message* top_element;
-  // uint64_t get_rem_wq_cnt() {return remote_op_queue.size();}
-  // uint64_t get_new_wq_cnt() {return new_query_queue.size();}
 
 private:
-#ifdef NEW_WORK_QUEUE
-  WCircularBuffer work_queue;
-  WCircularBuffer new_txn_queue;
-
-  sem_t 	mw;
-  sem_t 	mt;
-#else
-  boost::lockfree::queue<work_queue_entry* > * work_queue;
+  boost::lockfree::queue<work_queue_entry* > * sub_txn_queue;
   boost::lockfree::queue<work_queue_entry* > * new_txn_queue;
-#endif
   boost::lockfree::queue<work_queue_entry* > * seq_queue;
   boost::lockfree::queue<work_queue_entry* > ** sched_queue;
 

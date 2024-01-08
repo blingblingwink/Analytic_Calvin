@@ -49,7 +49,6 @@
 #if 0
 // #define LESS_DIS // Reduce the number of yCSB remote data to 1
 // #define LESS_DIS_NUM 10 // Reduce the number of yCSB remote data to 1
-// #define NEW_WORK_QUEUE  // The workQueue data structure has been modified to perform 10,000 better than the original implementation.
 // #define NO_2PC  // Removing 2PC, of course, would be problematic in distributed transactions.
 // #define NO_REMOTE // remove all remote txn
 #endif 
@@ -403,6 +402,7 @@ enum PPSTxnType {
 #define DLI_DTA3 26
 #define SILO 27
 #define CNULL 28
+#define ANALYTIC_CALVIN 29
 // TIMESTAMP allocation method.
 #define TS_MUTEX          1
 #define TS_CAS            2

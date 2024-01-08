@@ -187,7 +187,7 @@ public:
 
 	void release_locks(RC rc);
 	bool isRecon() {
-		assert(CC_ALG == CALVIN || !recon);
+		assert(CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN || !recon);
 		return recon;
 	};
 	bool recon;

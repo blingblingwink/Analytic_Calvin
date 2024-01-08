@@ -106,7 +106,7 @@ void WorkerThread::process(Message * msg) {
       case CL_QRY:
       case CL_QRY_O:
 			case RTXN:
-#if CC_ALG == CALVIN
+#if CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN
         rc = process_calvin_rtxn(msg);
 #else
         rc = process_rtxn(msg);
@@ -245,7 +245,7 @@ void WorkerThread::abort() {
 }
 
 TxnManager * WorkerThread::get_transaction_manager(Message * msg) {
-#if CC_ALG == CALVIN
+#if CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN
   TxnManager* local_txn_man =
       txn_table.get_transaction_manager(get_thd_id(), msg->get_txn_id(), msg->get_batch_id());
 #else
@@ -283,35 +283,9 @@ RC WorkerThread::run() {
 	while(!simulation->is_done()) {
     txn_man = NULL;
     heartbeat();
-
-
     progress_stats();
-    Message* msg;
 
-  // DA takes msg logic
-
-  // #define TEST_MSG_order
-  #ifdef TEST_MSG_order
-    while(1)
-    {
-      msg = work_queue.dequeue(get_thd_id());
-      if (!msg) {
-        if (idle_starttime == 0) idle_starttime = get_sys_clock();
-        continue;
-      }
-      printf("s seq_id:%lu type:%c trans_id:%lu item:%c state:%lu next_state:%lu\n",
-      ((DAClientQueryMessage*)msg)->seq_id,
-      type2char(((DAClientQueryMessage*)msg)->txn_type),
-      ((DAClientQueryMessage*)msg)->trans_id,
-      static_cast<char>('x'+((DAClientQueryMessage*)msg)->item_id),
-      ((DAClientQueryMessage*)msg)->state,
-      (((DAClientQueryMessage*)msg)->next_state));
-      fflush(stdout);
-    }
-  #endif
-
-    msg = work_queue.dequeue(get_thd_id());
-
+    Message* msg = work_queue.dequeue(get_thd_id());
     if(!msg) {
       if (idle_starttime == 0) idle_starttime = get_sys_clock();
       //todo: add sleep 0.01ms
@@ -322,12 +296,11 @@ RC WorkerThread::run() {
       INC_STATS(_thd_id,worker_idle_time,get_sys_clock() - idle_starttime);
       idle_starttime = 0;
     }
-    //uint64_t starttime = get_sys_clock();
 
-    if((msg->rtype != CL_QRY && msg->rtype != CL_QRY_O) || CC_ALG == CALVIN) {
+    if((msg->rtype != CL_QRY && msg->rtype != CL_QRY_O) || CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN) {
       txn_man = get_transaction_manager(msg);
 
-      if (CC_ALG != CALVIN && IS_LOCAL(txn_man->get_txn_id())) {
+      if (CC_ALG != CALVIN && CC_ALG != ANALYTIC_CALVIN && IS_LOCAL(txn_man->get_txn_id())) {
         if (msg->rtype != RTXN_CONT &&
             ((msg->rtype != RACK_PREP) || (txn_man->get_rsp_cnt() == 1))) {
           txn_man->txn_stats.work_queue_time_short += msg->lat_work_queue_time;
@@ -348,7 +321,7 @@ RC WorkerThread::run() {
       } else {
           txn_man->txn_stats.clear_short();
       }
-      if (CC_ALG != CALVIN) {
+      if (CC_ALG != CALVIN && CC_ALG != ANALYTIC_CALVIN) {
         txn_man->txn_stats.lat_network_time_start = msg->lat_network_time;
         txn_man->txn_stats.lat_other_time_start = msg->lat_other_time;
       }
@@ -384,7 +357,7 @@ RC WorkerThread::run() {
 
     // delete message
     ready_starttime = get_sys_clock();
-#if CC_ALG != CALVIN
+#if CC_ALG != CALVIN && CC_ALG != ANALYTIC_CALVIN
     msg->release();
     delete msg;
 #endif
@@ -398,7 +371,7 @@ RC WorkerThread::run() {
 
 RC WorkerThread::process_rfin(Message * msg) {
   DEBUG("RFIN %ld\n",msg->get_txn_id());
-  assert(CC_ALG != CALVIN);
+  assert(CC_ALG != CALVIN && CC_ALG != ANALYTIC_CALVIN);
 
   M_ASSERT_V(!IS_LOCAL(msg->get_txn_id()), "RFIN local: %ld %ld/%d\n", msg->get_txn_id(),
              msg->get_txn_id() % g_node_cnt, g_node_id);
@@ -871,7 +844,7 @@ RC WorkerThread::process_log_flushed(Message * msg) {
 RC WorkerThread::process_rfwd(Message * msg) {
   DEBUG("RFWD (%ld,%ld)\n",msg->get_txn_id(),msg->get_batch_id());
   txn_man->txn_stats.remote_wait_time += get_sys_clock() - txn_man->txn_stats.wait_starttime;
-  assert(CC_ALG == CALVIN);
+  assert(CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN);
   int responses_left = txn_man->received_response(((ForwardMessage*)msg)->rc);
   assert(responses_left >=0);
   if(txn_man->calvin_collect_phase_done()) {

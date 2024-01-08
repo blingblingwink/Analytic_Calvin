@@ -148,7 +148,7 @@ void TxnStats::commit_stats(uint64_t thd_id, uint64_t txn_id, uint64_t batch_id,
 	total_work_queue_cnt += work_queue_cnt;
 	assert(total_process_time >= process_time);
 
-#if CC_ALG == CALVIN
+#if CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN
 
 	INC_STATS(thd_id,lat_s_loc_work_queue_time,work_queue_time);
 	INC_STATS(thd_id,lat_s_loc_msg_queue_time,msg_queue_time);
@@ -310,7 +310,7 @@ void TxnManager::init(uint64_t thd_id, Workload * h_wl) {
 	_signal_abort = false;
 	_timestamp = glob_manager.get_ts(get_thd_id());
 #endif
-#if CC_ALG == CALVIN
+#if CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN
 	phase = CALVIN_RW_ANALYSIS;
 	locking_done = false;
 	calvin_locked_rows.init(MAX_ROW_PER_TXN);
@@ -363,7 +363,7 @@ void TxnManager::reset() {
 	uncommitted_reads->clear();
 #endif
 
-#if CC_ALG == CALVIN
+#if CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN
 	phase = CALVIN_RW_ANALYSIS;
 	locking_done = false;
 	calvin_locked_rows.clear();
@@ -393,7 +393,7 @@ void TxnManager::release() {
 	delete uncommitted_reads;
 #endif
 
-#if CC_ALG == CALVIN
+#if CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN
 	calvin_locked_rows.release();
 #endif
 #if CC_ALG == SILO
@@ -621,7 +621,7 @@ void TxnManager::send_finish_messages() {
 int TxnManager::received_response(RC rc) {
 	assert(txn->rc == RCOK || txn->rc == Abort);
 	if (txn->rc == RCOK) txn->rc = rc;
-#if CC_ALG == CALVIN
+#if CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN
 	++rsp_cnt;
 #else
   if (rsp_cnt > 0)
@@ -668,7 +668,7 @@ void TxnManager::commit_stats() {
 		INC_STATS(get_thd_id(),cflt_cnt_txn,1);
 	}*/
 	txn_stats.commit_stats(get_thd_id(),get_txn_id(),get_batch_id(),timespan_long, timespan_short);
-#if CC_ALG == CALVIN
+#if CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN
 	return;
 #endif
 
@@ -769,7 +769,7 @@ void TxnManager::cleanup_row(RC rc, uint64_t rid) {
 	uint64_t version = 0;
 	// Handle calvin elsewhere
 
-#if CC_ALG != CALVIN
+#if CC_ALG != CALVIN && CC_ALG != ANALYTIC_CALVIN
 #if ISOLATION_LEVEL != READ_UNCOMMITTED
 	row_t * orig_r = txn->accesses[rid]->orig_row;
 	if (ROLL_BACK && type == XP &&
@@ -842,7 +842,7 @@ void TxnManager::cleanup(RC rc) {
 		|| CC_ALG == DLI_DTA2 || CC_ALG == DLI_DTA3 || CC_ALG == DLI_MVCC_BASE
 	dli_man.finish_trans(rc, this);
 #endif
-#if CC_ALG == CALVIN
+#if CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN
 	// cleanup locked rows
 	for (uint64_t i = 0; i < calvin_locked_rows.size(); i++) {
 		row_t * row = calvin_locked_rows[i];
@@ -1154,7 +1154,7 @@ RC TxnManager::validate() {
 }
 
 RC TxnManager::send_remote_reads() {
-	assert(CC_ALG == CALVIN);
+	assert(CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN);
 #if !YCSB_ABORT_MODE && WORKLOAD == YCSB
 	return RCOK;
 #endif

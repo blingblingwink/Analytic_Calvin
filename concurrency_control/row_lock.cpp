@@ -45,7 +45,7 @@ void Row_lock::init(row_t * row) {
 }
 
 RC Row_lock::lock_get(lock_t type, TxnManager * txn) {
-    assert (CC_ALG == NO_WAIT || CC_ALG == WAIT_DIE || CC_ALG == CALVIN);
+    assert (CC_ALG == NO_WAIT || CC_ALG == WAIT_DIE || CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN);
     RC rc;
     uint64_t starttime = get_sys_clock();
     uint64_t lock_get_start_time = starttime;
@@ -70,7 +70,7 @@ RC Row_lock::lock_get(lock_t type, TxnManager * txn) {
 			conflict = true;
 		}
 	}
-    if (CC_ALG == CALVIN && waiters_head) {
+    if ((CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN) && waiters_head) {
         conflict = true;
     }
 
@@ -203,7 +203,7 @@ RC Row_lock::lock_get(lock_t type, TxnManager * txn) {
 
 RC Row_lock::lock_release(TxnManager * txn) {
 
-#if CC_ALG == CALVIN && WORKLOAD == PPS
+#if (CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN) && WORKLOAD == PPS
     if (txn->isRecon()) {
         return RCOK;
     }
@@ -305,7 +305,7 @@ RC Row_lock::lock_release(TxnManager * txn) {
           _row->get_primary_key(), (uint64_t)_row);
     uint64_t timespan = get_sys_clock() - entry->txn->twopl_wait_start;
     entry->txn->twopl_wait_start = 0;
-#if CC_ALG != CALVIN
+#if CC_ALG != CALVIN && CC_ALG != ANALYTIC_CALVIN
     entry->txn->txn_stats.cc_block_time += timespan;
     entry->txn->txn_stats.cc_block_time_short += timespan;
 #endif
@@ -322,7 +322,7 @@ RC Row_lock::lock_release(TxnManager * txn) {
     ASSERT(entry->txn->lock_ready == false);
     if(entry->txn->decr_lr() == 0) {
         if(ATOM_CAS(entry->txn->lock_ready,false,true)) {
-#if CC_ALG == CALVIN
+#if CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN
             entry->txn->txn_stats.cc_block_time += timespan;
             entry->txn->txn_stats.cc_block_time_short += timespan;
 #endif
