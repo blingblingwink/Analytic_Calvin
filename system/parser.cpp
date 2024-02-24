@@ -189,7 +189,7 @@ void parser(int argc, char * argv[]) {
   g_abort_thread_cnt = 0;
   g_total_thread_cnt -= 1;
 #elif CC_ALG == ANALYTIC_CALVIN
-  g_total_thread_cnt += 2; // sequencer + pending handle thread
+  g_total_thread_cnt += 2 + g_scheduler_thread_cnt; // sequencer + pending handle thread + g_scheduler_thread_cnt
   // Remove abort thread
   g_abort_thread_cnt = 0;
   g_total_thread_cnt -= 1;

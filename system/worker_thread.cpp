@@ -301,6 +301,7 @@ bool WorkerThread::handle_work_queue() {
     return false;
   }
 
+  TMP_DEBUG("thd: %ld process workqueue txn: %ld\n", _thd_id, txn_man->get_txn_id());
   txn_man->register_thread(this);
   process(msg);
 
@@ -332,8 +333,8 @@ bool WorkerThread::handle_pending_queue() {
     return false;
   }
 
+  TMP_DEBUG("thd: %ld process pending txn: %ld\n", _thd_id, txn_man->get_txn_id());
   txn_man->register_thread(this);
-
   process_pending_txn();
   
   ready_starttime = get_sys_clock();
@@ -342,57 +343,6 @@ bool WorkerThread::handle_pending_queue() {
     assert(ready);
   }
   INC_STATS(get_thd_id(), worker_deactivate_txn_time, get_sys_clock() - ready_starttime);
-  return true;
-}
-
-bool WorkerThread::handle_locking() {
-  Message * msg = work_queue.sched_dequeue(_thd_id);
-  if (!msg) {
-    return false;    
-  }
-
-  // watermark
-  uint64_t watermark = msg->get_txn_id();
-  watermarks[_thd_id].store(watermark, memory_order_release);
-  TMP_DEBUG("thd: %ld set watermark\n", _thd_id);
-  
-  assert(msg->get_rtype() == CL_QRY || msg->get_rtype() == CL_QRY_O);
-  assert(msg->get_txn_id() != UINT64_MAX);
-
-  txn_man = txn_table.get_transaction_manager(get_thd_id(), msg->get_txn_id(), msg->get_batch_id());
-  while (!txn_man->unset_ready()) {
-	}
-
-  assert(ISSERVERN(msg->get_return_id()));
-  txn_man->txn_stats.starttime = get_sys_clock();
-  txn_man->txn_stats.lat_network_time_start = msg->lat_network_time;
-  txn_man->txn_stats.lat_other_time_start = msg->lat_other_time;
-
-  msg->copy_to_txn(txn_man);
-  txn_man->register_thread(this);
-  assert(ISSERVERN(txn_man->return_id));
-
-  // Acquire locks
-  RC rc = RCOK;
-#if WORKLOAD == PPS
-  if (!txn_man->isRecon()) {
-    rc = txn_man->acquire_locks();
-  }
-#else
-  rc = txn_man->acquire_locks();
-#endif
-  if (rc == RCOK) {
-    if (watermark <= min_watermark.load()) {
-      process_pending_txn();
-    } else {
-      work_queue.pending_enqueue(txn_man, ++txn_man->enter_pending_cnt);
-    }
-  }
-
-  if(txn_man) { // txn may have finished, under which condition, txn_man is NULL
-    bool ready = txn_man->set_ready();
-    assert(ready);
-  }
   return true;
 }
 
@@ -425,7 +375,6 @@ RC WorkerThread::run() {
     // handle_work_queue();
     // handle_pending_queue();
     // then handle locking
-    handle_locking();
   }
   printf("FINISH %ld:%ld\n",_node_id,_thd_id);
   fflush(stdout);
@@ -1120,7 +1069,7 @@ RC PendingHandleThread::run() {
 	while(!simulation->is_done()) {
     // usleep(10);
     uint64_t min_val = UINT64_MAX;
-    for (uint32_t i = 0; i < g_thread_cnt; i++) {
+    for (uint32_t i = 0; i < g_scheduler_thread_cnt; i++) {
       min_val = std::min(min_val, watermarks[i].load(memory_order_acquire));
     }
     min_watermark.store(min_val);

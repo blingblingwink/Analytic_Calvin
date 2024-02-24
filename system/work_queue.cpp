@@ -409,4 +409,9 @@ void QWorkQueue::back_to_executable_queue(TxnManager *txn) {
 	while (!validation_queue.executable_txn_queue.push(txn) && !simulation->is_done()) {
 	}
 }
+
+void QWorkQueue::immediate_execute(TxnManager *txn) {
+	while (!validation_queue.executable_txn_queue.push(txn) && !simulation->is_done()) {
+	}
+}
 #endif

@@ -68,6 +68,7 @@ LogThread * log_thds;
 CalvinLockThread * calvin_lock_thds;
 CalvinSequencerThread * calvin_seq_thds;
 #elif CC_ALG == ANALYTIC_CALVIN
+CalvinLockThread * calvin_lock_thds;
 PendingHandleThread * pending_handle_thds;
 CalvinSequencerThread * calvin_seq_thds;
 #endif
@@ -266,7 +267,7 @@ int main(int argc, char *argv[]) {
 #endif
 
 #if CC_ALG == ANALYTIC_CALVIN
-	for (size_t i = 0; i < g_thread_cnt; i++) {
+	for (size_t i = 0; i < g_scheduler_thread_cnt; i++) {
 		watermarks[i].store(0, memory_order_release);
 	}
 #endif
@@ -283,7 +284,7 @@ int main(int argc, char *argv[]) {
 #if CC_ALG == CALVIN
 	all_thd_cnt += 2; // sequencer + scheduler thread
 #elif CC_ALG == ANALYTIC_CALVIN
-	all_thd_cnt += 2;	// sequencer + pending handle thread
+	all_thd_cnt += 2 + g_scheduler_thread_cnt;	// sequencer + pending handle thread + schedulers
 #endif
 
 
@@ -306,6 +307,7 @@ int main(int argc, char *argv[]) {
 	calvin_lock_thds = new CalvinLockThread[1];
 	calvin_seq_thds = new CalvinSequencerThread[1];
 #elif CC_ALG == ANALYTIC_CALVIN
+	calvin_lock_thds = new CalvinLockThread[g_scheduler_thread_cnt];
 	pending_handle_thds = new PendingHandleThread[1];
 	calvin_seq_thds = new CalvinSequencerThread[1];
 #endif
@@ -415,6 +417,17 @@ int main(int argc, char *argv[]) {
 	calvin_seq_thds[0].init(id,g_node_id,m_wl);
 	pthread_create(&p_thds[id++], &attr, run_thread, (void *)&calvin_seq_thds[0]);
 #elif CC_ALG == ANALYTIC_CALVIN
+	for (uint64_t i = 0; i < g_scheduler_thread_cnt; i++) {
+#if SET_AFFINITY
+		CPU_ZERO(&cpus);
+		CPU_SET(cpu_cnt, &cpus);
+		pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpus);
+		cpu_cnt++;
+#endif
+		calvin_lock_thds[i].init(id, g_node_id, m_wl, i);
+		pthread_create(&p_thds[id++], &attr, run_thread, (void*)&calvin_lock_thds[i]);
+	}
+
 #if SET_AFFINITY
 	CPU_ZERO(&cpus);
 	CPU_SET(cpu_cnt, &cpus);

@@ -36,8 +36,14 @@ class CalvinLockThread : public Thread {
 public:
     RC run();
     void setup();
+#if CC_ALG == ANALYTIC_CALVIN
+    void init(uint64_t thd_id, uint64_t node_id, Workload * workload, uint64_t id);
+#endif
 private:
     TxnManager * m_txn;
+#if CC_ALG == ANALYTIC_CALVIN
+    uint64_t id;
+#endif
 };
 
 class CalvinSequencerThread : public Thread {

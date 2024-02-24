@@ -108,7 +108,7 @@ e.g. thread 0 is handling lockding for txn 0, thread 1 is handling txn 1,
 but txn 1 registers its watermark quicker than txn 0 (due to unpredictable thread scheduling),
 then txn 1 is wrongly regarded as smallest txn_id
 */
-std::array<std::atomic<uint64_t>, THREAD_CNT> watermarks;
+std::array<std::atomic<uint64_t>, SCHEDULER_THREAD_CNT> watermarks;
 std::atomic<uint64_t> min_watermark;
 #endif
 boost::lockfree::queue<DAQuery*, boost::lockfree::fixed_sized<true>> da_query_queue{100};
@@ -175,6 +175,7 @@ UInt32 g_logger_thread_cnt = 1;
 UInt32 g_logger_thread_cnt = 0;
 #endif
 UInt32 g_send_thread_cnt = SEND_THREAD_CNT;
+UInt32 g_scheduler_thread_cnt = SCHEDULER_THREAD_CNT;
 
 // Actually, assignment here is workless, since these values will be assigned again in parser.cpp
 // and then, in main.cpp, an assert between all_thd_cnt and g_total_thread_cnt will be made
@@ -182,7 +183,7 @@ UInt32 g_send_thread_cnt = SEND_THREAD_CNT;
 // sequencer + scheduler thread
 UInt32 g_total_thread_cnt = g_thread_cnt + g_rem_thread_cnt + g_send_thread_cnt + g_abort_thread_cnt + g_logger_thread_cnt + 3;
 #elif CC_ALG == ANALYTIC_CALVIN
-UInt32 g_total_thread_cnt = g_thread_cnt + g_rem_thread_cnt + g_send_thread_cnt + g_abort_thread_cnt + g_logger_thread_cnt + 3;
+UInt32 g_total_thread_cnt = g_thread_cnt + g_rem_thread_cnt + g_send_thread_cnt + g_abort_thread_cnt + g_logger_thread_cnt + g_scheduler_thread_cnt + 3;
 #else
 UInt32 g_total_thread_cnt = g_thread_cnt + g_rem_thread_cnt + g_send_thread_cnt + g_abort_thread_cnt + g_logger_thread_cnt + 1;
 #endif

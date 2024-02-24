@@ -36,6 +36,82 @@
 
 void CalvinLockThread::setup() {}
 
+#if CC_ALG == ANALYTIC_CALVIN
+void CalvinLockThread::init(uint64_t thd_id, uint64_t node_id, Workload * workload, uint64_t id) {
+	this->id = id;
+	Thread::init(thd_id, node_id, workload);
+}
+
+RC CalvinLockThread::run() {
+	tsetup();
+
+	TxnManager * txn_man;
+	uint64_t prof_starttime = get_sys_clock();
+	uint64_t idle_starttime = 0;
+
+	while(!simulation->is_done()) {
+		Message * msg = work_queue.sched_dequeue(_thd_id);
+		if(!msg) {
+			if (idle_starttime == 0) idle_starttime = get_sys_clock();
+			continue;
+		}
+		if(idle_starttime > 0) {
+			INC_STATS(_thd_id,sched_idle_time,get_sys_clock() - idle_starttime);
+			idle_starttime = 0;
+		}
+
+		// watermark
+		uint64_t watermark = msg->get_txn_id();
+		watermarks[id].store(watermark, memory_order_release);
+		TMP_DEBUG("thd: %ld set watermark\n", id);
+		
+		prof_starttime = get_sys_clock();
+		assert(msg->get_rtype() == CL_QRY || msg->get_rtype() == CL_QRY_O);
+		assert(msg->get_txn_id() != UINT64_MAX);
+
+		txn_man = txn_table.get_transaction_manager(get_thd_id(), msg->get_txn_id(), msg->get_batch_id());
+		while (!txn_man->unset_ready()) {
+		}
+
+		assert(ISSERVERN(msg->get_return_id()));
+		txn_man->txn_stats.starttime = get_sys_clock();
+		txn_man->txn_stats.lat_network_time_start = msg->lat_network_time;
+		txn_man->txn_stats.lat_other_time_start = msg->lat_other_time;
+
+		msg->copy_to_txn(txn_man);
+		txn_man->register_thread(this);
+		assert(ISSERVERN(txn_man->return_id));
+		INC_STATS(get_thd_id(),sched_txn_table_time,get_sys_clock() - prof_starttime);
+		prof_starttime = get_sys_clock();
+
+		// Acquire locks
+		RC rc = RCOK;
+#if WORKLOAD == PPS
+		if (!txn_man->isRecon()) {
+			rc = txn_man->acquire_locks();
+		}
+#else
+		rc = txn_man->acquire_locks();
+#endif
+		if (rc == RCOK) {
+			if (watermark <= min_watermark.load()) {
+				// work_queue.enqueue(_thd_id, msg, false);
+				work_queue.immediate_execute(txn_man);
+			} else {
+				work_queue.pending_enqueue(txn_man, ++txn_man->enter_pending_cnt);
+			}
+		}
+
+		txn_man->set_ready();
+
+		INC_STATS(_thd_id,mtx[33],get_sys_clock() - prof_starttime);
+		prof_starttime = get_sys_clock();
+	}
+	printf("FINISH %ld:%ld\n",_node_id,_thd_id);
+	fflush(stdout);
+	return FINISH;
+}
+#else
 RC CalvinLockThread::run() {
 	tsetup();
 
@@ -100,6 +176,7 @@ RC CalvinLockThread::run() {
 	fflush(stdout);
 	return FINISH;
 }
+#endif
 
 void CalvinSequencerThread::setup() {}
 

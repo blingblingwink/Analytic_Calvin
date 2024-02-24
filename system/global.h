@@ -189,6 +189,7 @@ extern UInt32 g_logger_thread_cnt;
 extern UInt32 g_tcp_thread_cnt;
 extern UInt32 g_send_thread_cnt;
 extern UInt32 g_rem_thread_cnt;
+extern UInt32 g_scheduler_thread_cnt;
 extern ts_t g_abort_penalty;
 extern ts_t g_abort_penalty_max;
 extern bool g_central_man;
@@ -265,7 +266,7 @@ extern double g_perc_updateproductpart;
 extern double g_perc_updatepart;
 
 #if CC_ALG == ANALYTIC_CALVIN
-extern std::array<std::atomic<uint64_t>, THREAD_CNT> watermarks;
+extern std::array<std::atomic<uint64_t>, SCHEDULER_THREAD_CNT> watermarks;
 extern std::atomic<uint64_t> min_watermark;
 #endif
 extern boost::lockfree::queue<DAQuery*, boost::lockfree::fixed_sized<true>> da_query_queue;

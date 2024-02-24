@@ -78,6 +78,7 @@ public:
   TxnManager * pending_dequeue(uint64_t thd_id);
   void pending_validate(uint64_t thd_id);
   void back_to_executable_queue(TxnManager * txn);
+  void immediate_execute(TxnManager * txn);
 #endif
 
   uint64_t get_cnt() {return get_wq_cnt() + get_rem_wq_cnt() + get_new_wq_cnt();}

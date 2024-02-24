@@ -62,7 +62,6 @@ private:
 #if CC_ALG == ANALYTIC_CALVIN
     bool handle_work_queue();
     bool handle_pending_queue();
-    bool handle_locking();
     void process_pending_txn();
 #endif
 };
