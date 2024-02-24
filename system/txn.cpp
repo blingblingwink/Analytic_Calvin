@@ -312,7 +312,6 @@ void TxnManager::init(uint64_t thd_id, Workload * h_wl) {
 #endif
 #if CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN
 	phase = CALVIN_RW_ANALYSIS;
-	locking_done = false;
 	calvin_locked_rows.init(MAX_ROW_PER_TXN);
 #endif
 #if CC_ALG == DLI_MVCC || CC_ALG == DLI_MVCC_OCC
@@ -343,7 +342,6 @@ void TxnManager::init(uint64_t thd_id, Workload * h_wl) {
 void TxnManager::reset() {
 	lock_ready = false;
 	lock_ready_cnt = 0;
-	locking_done = true;
 #if CC_ALG == DLI_MVCC || CC_ALG == DLI_MVCC_OCC
 	is_abort = nullptr;
 #endif
@@ -365,7 +363,6 @@ void TxnManager::reset() {
 
 #if CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN
 	phase = CALVIN_RW_ANALYSIS;
-	locking_done = false;
 	calvin_locked_rows.clear();
 #endif
 

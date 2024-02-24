@@ -23,7 +23,6 @@
 #include <boost/lockfree/queue.hpp>
 #include <boost/circular_buffer.hpp>
 #include "semaphore.h"
-//#include "message.h"
 
 class BaseQuery;
 class Workload;
@@ -95,8 +94,8 @@ public:
   Message* top_element;
 
 private:
-  boost::lockfree::queue<work_queue_entry* > * sub_txn_queue;
-  boost::lockfree::queue<work_queue_entry* > * new_txn_queue;
+  boost::lockfree::queue<work_queue_entry* > * sub_txn_queue; // txns apart from CL_QRY, e.g. RTXN, RFWD
+  boost::lockfree::queue<work_queue_entry* > * new_txn_queue; // CL_QRY
   boost::lockfree::queue<work_queue_entry* > * seq_queue;
   boost::lockfree::queue<work_queue_entry* > ** sched_queue;
 

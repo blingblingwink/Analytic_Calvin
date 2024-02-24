@@ -123,7 +123,6 @@ bool TPCCTxnManager::is_done() {
 RC TPCCTxnManager::acquire_locks() {
 	uint64_t starttime = get_sys_clock();
 	assert(CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN);
-	locking_done = false;
 	RC rc = RCOK;
 	RC rc2;
 	INDEX * index;
@@ -232,7 +231,6 @@ RC TPCCTxnManager::acquire_locks() {
 		if (ATOM_CAS(lock_ready, false, true)) rc = RCOK;
 	}
 	txn_stats.wait_starttime = get_sys_clock();
-	locking_done = true;
 	INC_STATS(get_thd_id(),calvin_sched_time,get_sys_clock() - starttime);
 	return rc;
 }

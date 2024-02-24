@@ -130,7 +130,6 @@ bool PPSTxnManager::is_done() {
 RC PPSTxnManager::acquire_locks() {
   uint64_t starttime = get_sys_clock();
   assert(CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN);
-  locking_done = false;
   RC rc = RCOK;
   RC rc2 = RCOK;
   INDEX * index;
@@ -294,7 +293,6 @@ RC PPSTxnManager::acquire_locks() {
     if (ATOM_CAS(lock_ready, 0, 1)) rc = RCOK;
   }
   txn_stats.wait_starttime = get_sys_clock();
-  locking_done = true;
   INC_STATS(get_thd_id(),calvin_sched_time,get_sys_clock() - starttime);
   return rc;
 }

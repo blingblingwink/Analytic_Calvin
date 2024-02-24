@@ -50,7 +50,6 @@ RC YCSBTxnManager::acquire_locks() {
   uint64_t starttime = get_sys_clock();
   assert(CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN);
   YCSBQuery* ycsb_query = (YCSBQuery*) query;
-  locking_done = false;
   RC rc = RCOK;
   incr_lr();
   assert(ycsb_query->requests.size() == g_req_per_query);
@@ -74,15 +73,8 @@ RC YCSBTxnManager::acquire_locks() {
     if (ATOM_CAS(lock_ready, false, true)) rc = RCOK;
   }
   txn_stats.wait_starttime = get_sys_clock();
-  /*
-  if(rc == WAIT && lock_ready_cnt == 0) {
-    if(ATOM_CAS(lock_ready,false,true))
-    //lock_ready = true;
-      rc = RCOK;
-  }
-  */
+
   INC_STATS(get_thd_id(),calvin_sched_time,get_sys_clock() - starttime);
-  locking_done = true;
   return rc;
 }
 

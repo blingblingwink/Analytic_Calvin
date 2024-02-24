@@ -25,12 +25,7 @@ void QWorkQueue::init() {
 
 	last_sched_dq = NULL;
 	sched_ptr = 0;
-#ifdef NEW_WORK_QUEUE
-	work_queue.set_capacity(QUEUE_CAPACITY_NEW);
-	new_txn_queue.set_capacity(QUEUE_CAPACITY_NEW);
-	sem_init(&mt, 0, 1);
-	sem_init(&mw, 0, 1);
-#else
+
 	seq_queue = new boost::lockfree::queue<work_queue_entry* > (0);
 	sub_txn_queue = new boost::lockfree::queue<work_queue_entry* > (0);
 	new_txn_queue = new boost::lockfree::queue<work_queue_entry* >(0);
@@ -38,7 +33,7 @@ void QWorkQueue::init() {
 	for ( uint64_t i = 0; i < g_node_cnt; i++) {
 		sched_queue[i] = new boost::lockfree::queue<work_queue_entry* > (0);
 	}
-#endif
+
 	txn_queue_size = 0;
 	work_queue_size = 0;
 
@@ -143,9 +138,6 @@ Message * QWorkQueue::sched_dequeue(uint64_t thd_id) {
 		mem_allocator.free(entry,sizeof(work_queue_entry));
 
 		if(msg->rtype == RDONE) {
-			// Advance to next queue or next epoch
-			DEBUG("Sched RDONE %ld %ld\n",sched_ptr,simulation->get_worker_epoch());
-			assert(msg->get_batch_id() == simulation->get_worker_epoch());
 			if(sched_ptr == g_node_cnt - 1) {
 				INC_STATS(thd_id,sched_epoch_cnt,1);
 				INC_STATS(thd_id,sched_epoch_diff,get_sys_clock()-simulation->last_worker_epoch_time);
@@ -157,9 +149,6 @@ Message * QWorkQueue::sched_dequeue(uint64_t thd_id) {
 
 		} else {
 			simulation->inc_epoch_txn_cnt();
-			DEBUG("Sched msg dequeue %ld (%ld,%ld) %ld\n", sched_ptr, msg->txn_id, msg->batch_id,
-						simulation->get_worker_epoch());
-			assert(msg->batch_id == simulation->get_worker_epoch());
 		}
 
 		INC_STATS(thd_id,sched_queue_dequeue_time,get_sys_clock() - starttime);

@@ -292,7 +292,6 @@ public:
 	// Calvin
 	uint32_t lock_ready_cnt;
 	uint32_t calvin_expected_rsp_cnt;
-	bool locking_done;
 	CALVIN_PHASE phase;
 	Array<row_t*> calvin_locked_rows;
 	bool calvin_exec_phase_done();

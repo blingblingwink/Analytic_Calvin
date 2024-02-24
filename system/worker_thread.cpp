@@ -308,13 +308,6 @@ RC WorkerThread::run() {
           txn_man->txn_stats.cc_time_short += msg->lat_cc_time;
           txn_man->txn_stats.msg_queue_time_short += msg->lat_msg_queue_time;
           txn_man->txn_stats.process_time_short += msg->lat_process_time;
-          /*
-          if (msg->lat_network_time/BILLION > 1.0) {
-            printf("%ld %d %ld -> %ld: %f %f\n",msg->txn_id, msg->rtype,
-          msg->return_node_id,get_node_id() ,msg->lat_network_time/BILLION,
-          msg->lat_other_time/BILLION);
-          }
-          */
           txn_man->txn_stats.network_time_short += msg->lat_network_time;
         }
 
