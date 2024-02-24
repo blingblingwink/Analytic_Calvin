@@ -38,6 +38,7 @@
 #include "row_wsi.h"
 #include "row_null.h"
 #include "row_silo.h"
+#include "row_acalvin.h"
 #include "mem_alloc.h"
 #include "manager.h"
 
@@ -68,7 +69,7 @@ void row_t::init_manager(row_t * row) {
 	return;
 #endif
 	DEBUG_M("row_t::init_manager alloc \n");
-#if CC_ALG == NO_WAIT || CC_ALG == WAIT_DIE || CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN
+#if CC_ALG == NO_WAIT || CC_ALG == WAIT_DIE || CC_ALG == CALVIN
 	manager = (Row_lock *) mem_allocator.align_alloc(sizeof(Row_lock));
 #elif CC_ALG == TIMESTAMP
 	manager = (Row_ts *) mem_allocator.align_alloc(sizeof(Row_ts));
@@ -96,6 +97,8 @@ void row_t::init_manager(row_t * row) {
 	manager = (Row_null *) mem_allocator.align_alloc(sizeof(Row_null));
 #elif CC_ALG == SILO
     manager = (Row_silo *) mem_allocator.align_alloc(sizeof(Row_silo));
+#elif CC_ALG == ANALYTIC_CALVIN
+	manager = (Row_acalvin*) mem_allocator.align_alloc(sizeof(Row_acalvin));
 #endif
 
 #if CC_ALG != HSTORE && CC_ALG != HSTORE_SPEC && CC_ALG != TICTOC

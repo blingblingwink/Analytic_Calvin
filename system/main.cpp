@@ -64,8 +64,11 @@ InputThread * input_thds;
 OutputThread * output_thds;
 AbortThread * abort_thds;
 LogThread * log_thds;
-#if CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN
+#if CC_ALG == CALVIN
 CalvinLockThread * calvin_lock_thds;
+CalvinSequencerThread * calvin_seq_thds;
+#elif CC_ALG == ANALYTIC_CALVIN
+PendingHandleThread * pending_handle_thds;
 CalvinSequencerThread * calvin_seq_thds;
 #endif
 
@@ -220,11 +223,6 @@ int main(int argc, char *argv[]) {
 	fflush(stdout);
 	wkdb_time_table.init();
 	printf("Done\n");
-	// printf("Initializing WKDB KeyxidCache and RtsCache... ");
-	// fflush(stdout);
-	// wkdb_key_xid_cache.init();
-	// wkdb_rts_cache.init();
-	// printf("Done\n");
 	printf("Initializing WKDB manager... ");
 	fflush(stdout);
 	wkdb_man.init();
@@ -242,11 +240,6 @@ int main(int argc, char *argv[]) {
 	fflush(stdout);
 	dta_time_table.init();
 	printf("Done\n");
-	// printf("Initializing DTA KeyxidCache and RtsCache... ");
-	// fflush(stdout);
-	// dta_key_xid_cache.init();
-	// dta_rts_cache.init();
-	// printf("Done\n");
 	printf("Initializing DTA manager... ");
 	fflush(stdout);
 	dta_man.init();
@@ -272,6 +265,12 @@ int main(int argc, char *argv[]) {
 	abort_file.open("abort_histroy.txt",ios::app);
 #endif
 
+#if CC_ALG == ANALYTIC_CALVIN
+	for (size_t i = 0; i < g_thread_cnt; i++) {
+		watermarks[i].store(0, memory_order_release);
+	}
+#endif
+
 	// 2. spawn multiple threads
 	uint64_t thd_cnt = g_thread_cnt;
 	uint64_t wthd_cnt = thd_cnt;
@@ -279,10 +278,12 @@ int main(int argc, char *argv[]) {
 	uint64_t sthd_cnt = g_send_thread_cnt;
 	uint64_t all_thd_cnt = thd_cnt + rthd_cnt + sthd_cnt + g_abort_thread_cnt + 1;
 #if LOGGING
-		all_thd_cnt += 1; // logger thread
+	all_thd_cnt += 1; // logger thread
 #endif
-#if CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN
-		all_thd_cnt += 2; // sequencer + scheduler thread
+#if CC_ALG == CALVIN
+	all_thd_cnt += 2; // sequencer + scheduler thread
+#elif CC_ALG == ANALYTIC_CALVIN
+	all_thd_cnt += 2;	// sequencer + pending handle thread
 #endif
 
 
@@ -301,8 +302,11 @@ int main(int argc, char *argv[]) {
 	output_thds = new OutputThread[sthd_cnt];
 	abort_thds = new AbortThread[1];
 	log_thds = new LogThread[1];
-#if CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN
+#if CC_ALG == CALVIN
 	calvin_lock_thds = new CalvinLockThread[1];
+	calvin_seq_thds = new CalvinSequencerThread[1];
+#elif CC_ALG == ANALYTIC_CALVIN
+	pending_handle_thds = new PendingHandleThread[1];
 	calvin_seq_thds = new CalvinSequencerThread[1];
 #endif
 	// query_queue should be the last one to be initialized!!!
@@ -350,7 +354,7 @@ int main(int argc, char *argv[]) {
 	pthread_barrier_init( &warmup_bar, NULL, all_thd_cnt);
 
 #if SET_AFFINITY
-	uint64_t cpu_cnt = 0;
+	uint64_t cpu_cnt = 12;	// start from 0 impairs performance
 	cpu_set_t cpus;
 #endif
 	// spawn and run txns again.
@@ -391,7 +395,7 @@ int main(int argc, char *argv[]) {
 	pthread_create(&p_thds[id++], NULL, run_thread, (void *)&abort_thds[0]);
 #endif
 
-#if CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN
+#if CC_ALG == CALVIN
 #if SET_AFFINITY
 	CPU_ZERO(&cpus);
 	CPU_SET(cpu_cnt, &cpus);
@@ -401,6 +405,25 @@ int main(int argc, char *argv[]) {
 
 	calvin_lock_thds[0].init(id,g_node_id,m_wl);
 	pthread_create(&p_thds[id++], &attr, run_thread, (void *)&calvin_lock_thds[0]);
+#if SET_AFFINITY
+	CPU_ZERO(&cpus);
+	CPU_SET(cpu_cnt, &cpus);
+	pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpus);
+	cpu_cnt++;
+#endif
+
+	calvin_seq_thds[0].init(id,g_node_id,m_wl);
+	pthread_create(&p_thds[id++], &attr, run_thread, (void *)&calvin_seq_thds[0]);
+#elif CC_ALG == ANALYTIC_CALVIN
+#if SET_AFFINITY
+	CPU_ZERO(&cpus);
+	CPU_SET(cpu_cnt, &cpus);
+	pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpus);
+	cpu_cnt++;
+#endif
+
+	pending_handle_thds[0].init(id,g_node_id,m_wl);
+	pthread_create(&p_thds[id++], &attr, run_thread, (void *)&pending_handle_thds[0]);
 #if SET_AFFINITY
 	CPU_ZERO(&cpus);
 	CPU_SET(cpu_cnt, &cpus);

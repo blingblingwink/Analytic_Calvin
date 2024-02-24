@@ -20,6 +20,7 @@
 #include "message.h"
 #include "client_query.h"
 #include <boost/lockfree/queue.hpp>
+#include "txn.h"
 
 void QWorkQueue::init() {
 
@@ -351,3 +352,61 @@ Message * QWorkQueue::queuetop(uint64_t thd_id)
 	return msg;
 }
 
+#if CC_ALG == ANALYTIC_CALVIN
+void QWorkQueue::pending_enqueue(TxnManager * txn_man, uint16_t cnt) {
+	while (!validation_queue.pending_txn_queue.push({txn_man, cnt}) && !simulation->is_done()) {
+	}
+}
+
+TxnManager * QWorkQueue::pending_dequeue(uint64_t thd_id) {
+	TxnManager *txn = NULL;
+	// if lockfree queue pop failed, element is undefined, so use return value to check
+	if (validation_queue.executable_txn_queue.pop(txn)) {
+		return txn;
+	} else {
+		return NULL;
+	}
+}
+
+void QWorkQueue::pending_validate(uint64_t thd_id) {
+	// this implementation may lead to last few txns remain to be unexecuted, but experiments are not affected
+
+	uint64_t handled = 0;
+	uint64_t watermark = min_watermark.load();
+	auto send_txn = [&](TxnManager* txn) {
+		handled++;
+		while (!validation_queue.executable_txn_queue.push(txn) && !simulation->is_done()) {
+		}
+	};
+	// check txns remained from last time
+	for (auto it = validation_queue.to_be_validate.begin(); it != validation_queue.to_be_validate.end(); ) {
+		if (it->txn->get_txn_id() > watermark) {
+			it++;
+		} else {
+			if (it->txn->lock_ready == true && it->txn->enter_pending_cnt == it->cnt) {
+				send_txn(it->txn);
+			}
+			it = validation_queue.to_be_validate.erase(it);
+		} 
+	}
+
+	// pending_txn_queue check
+	VTxn element;
+	while (validation_queue.pending_txn_queue.pop(element)) {
+		if (element.txn->get_txn_id() > watermark) {
+			validation_queue.to_be_validate.push_back(element);
+		} else {
+			if (element.txn->lock_ready == true && element.txn->enter_pending_cnt == element.cnt) {
+				send_txn(element.txn);
+			}
+		}
+	}
+
+	TMP_DEBUG("watermark: %ld executable: %ld\n", watermark, handled);
+}
+
+void QWorkQueue::back_to_executable_queue(TxnManager *txn) {
+	while (!validation_queue.executable_txn_queue.push(txn) && !simulation->is_done()) {
+	}
+}
+#endif

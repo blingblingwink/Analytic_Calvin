@@ -53,6 +53,12 @@
     fflush(stdout); \
   }
 
+#define TMP_DEBUG(...) \
+  if (false && warmup_done) { \
+    fprintf(stdout,__VA_ARGS__); \
+    fflush(stdout); \
+  }
+
 /************************************************/
 // atomic operations
 /************************************************/

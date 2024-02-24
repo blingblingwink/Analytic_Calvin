@@ -59,6 +59,7 @@ class Row_tictoc;
 class Row_si;
 class Row_null;
 class Row_silo;
+class Row_acalvin;
 
 class row_t {
 public:
@@ -113,39 +114,41 @@ public:
 	uint64_t return_row(RC rc, access_t type, TxnManager *txn, row_t *row);
 	void return_row(RC rc, access_t type, TxnManager * txn, row_t * row, uint64_t _min_commit_ts);
 
-	#if CC_ALG == DL_DETECT || CC_ALG == NO_WAIT || CC_ALG == WAIT_DIE || CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN
+#if CC_ALG == DL_DETECT || CC_ALG == NO_WAIT || CC_ALG == WAIT_DIE || CC_ALG == CALVIN
 	Row_lock * manager;
-	#elif CC_ALG == TIMESTAMP
-	 	Row_ts * manager;
-	#elif CC_ALG == MVCC
-		Row_mvcc * manager;
-	#elif CC_ALG == OCC || CC_ALG == BOCC || CC_ALG == FOCC
-			Row_occ * manager;
-	#elif CC_ALG == DLI_BASE || CC_ALG == DLI_OCC
-		Row_dli_base *manager;
-	#elif CC_ALG == MAAT
-		Row_maat * manager;
-	#elif CC_ALG == WOOKONG
-		Row_wkdb * manager;
-	#elif CC_ALG == TICTOC
-		Row_tictoc * manager;
-	#elif CC_ALG == HSTORE_SPEC
-		Row_specex * manager;
-	#elif CC_ALG == AVOID
-		Row_avoid * manager;
-	#elif CC_ALG == DLI_MVCC_OCC || CC_ALG == DLI_DTA || CC_ALG == DLI_DTA2 || CC_ALG == DLI_DTA3 || CC_ALG == DLI_MVCC
-		Row_si *manager;
-	#elif CC_ALG == DTA
-		Row_dta *manager;
-	#elif CC_ALG == SSI
-		Row_ssi * manager;
-	#elif CC_ALG == WSI
-		Row_wsi * manager;
-	#elif CC_ALG == CNULL
-		Row_null * manager;
-  #elif CC_ALG == SILO
-  	Row_silo * manager;
-	#endif
+#elif CC_ALG == TIMESTAMP
+	Row_ts * manager;
+#elif CC_ALG == MVCC
+	Row_mvcc * manager;
+#elif CC_ALG == OCC || CC_ALG == BOCC || CC_ALG == FOCC
+		Row_occ * manager;
+#elif CC_ALG == DLI_BASE || CC_ALG == DLI_OCC
+	Row_dli_base *manager;
+#elif CC_ALG == MAAT
+	Row_maat * manager;
+#elif CC_ALG == WOOKONG
+	Row_wkdb * manager;
+#elif CC_ALG == TICTOC
+	Row_tictoc * manager;
+#elif CC_ALG == HSTORE_SPEC
+	Row_specex * manager;
+#elif CC_ALG == AVOID
+	Row_avoid * manager;
+#elif CC_ALG == DLI_MVCC_OCC || CC_ALG == DLI_DTA || CC_ALG == DLI_DTA2 || CC_ALG == DLI_DTA3 || CC_ALG == DLI_MVCC
+	Row_si *manager;
+#elif CC_ALG == DTA
+	Row_dta *manager;
+#elif CC_ALG == SSI
+	Row_ssi * manager;
+#elif CC_ALG == WSI
+	Row_wsi * manager;
+#elif CC_ALG == CNULL
+	Row_null * manager;
+#elif CC_ALG == SILO
+	Row_silo * manager;
+#elif CC_ALG == ANALYTIC_CALVIN
+	Row_acalvin *manager;
+#endif
 	char * data;
 	int tuple_size;
 	table_t * table;

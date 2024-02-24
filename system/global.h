@@ -264,6 +264,10 @@ extern double g_perc_orderproduct;
 extern double g_perc_updateproductpart;
 extern double g_perc_updatepart;
 
+#if CC_ALG == ANALYTIC_CALVIN
+extern std::array<std::atomic<uint64_t>, THREAD_CNT> watermarks;
+extern std::atomic<uint64_t> min_watermark;
+#endif
 extern boost::lockfree::queue<DAQuery*, boost::lockfree::fixed_sized<true>> da_query_queue;
 extern DABlockQueue da_gen_qry_queue;
 extern bool is_server;

@@ -73,6 +73,12 @@ public:
   Message * sched_dequeue(uint64_t thd_id);
   void sequencer_enqueue(uint64_t thd_id, Message * msg);
   Message * sequencer_dequeue(uint64_t thd_id);
+#if CC_ALG == ANALYTIC_CALVIN
+  void pending_enqueue(TxnManager * txn_man, uint16_t cnt);
+  TxnManager * pending_dequeue(uint64_t thd_id);
+  void pending_validate(uint64_t thd_id);
+  void back_to_executable_queue(TxnManager * txn);
+#endif
 
   uint64_t get_cnt() {return get_wq_cnt() + get_rem_wq_cnt() + get_new_wq_cnt();}
   uint64_t get_wq_cnt() {return 0;}
@@ -98,6 +104,19 @@ private:
   boost::lockfree::queue<work_queue_entry* > * new_txn_queue; // CL_QRY
   boost::lockfree::queue<work_queue_entry* > * seq_queue;
   boost::lockfree::queue<work_queue_entry* > ** sched_queue;
+  
+#if CC_ALG == ANALYTIC_CALVIN
+  struct VTxn {
+    TxnManager* txn;
+    uint16_t cnt;
+  };
+  struct VQueue {
+    boost::lockfree::queue<VTxn> pending_txn_queue{0};
+    boost::lockfree::queue<TxnManager*> executable_txn_queue{0};
+    std::vector<VTxn> to_be_validate;
+  };
+  VQueue validation_queue;
+#endif
 
   uint64_t sched_ptr;
   BaseQuery * last_sched_dq;

@@ -306,6 +306,10 @@ public:
 	std::atomic<bool>* is_abort = nullptr;
 #endif
 
+#if CC_ALG == ANALYTIC_CALVIN
+	std::atomic<uint16_t> enter_pending_cnt;
+#endif
+
 protected:
 
 	int rsp_cnt;

@@ -59,6 +59,12 @@ private:
     ts_t        _curr_ts;
     ts_t        get_next_ts();
     TxnManager * txn_man;
+#if CC_ALG == ANALYTIC_CALVIN
+    bool handle_work_queue();
+    bool handle_pending_queue();
+    bool handle_locking();
+    void process_pending_txn();
+#endif
 };
 
 class WorkerNumThread : public Thread {
@@ -67,4 +73,13 @@ public:
     void setup();
 
 };
+
+#if CC_ALG == ANALYTIC_CALVIN
+class PendingHandleThread: public Thread {
+public:
+    RC run();
+    void setup();
+};
+#endif
+
 #endif

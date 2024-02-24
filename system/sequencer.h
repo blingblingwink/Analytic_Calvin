@@ -76,6 +76,8 @@ class Sequencer {
 	qlite_ll * wl_head;		// list of txns in batch being executed
 	qlite_ll * wl_tail;		// list of txns in batch being executed
 	uint32_t next_txn_id;
+	uint64_t offset;
+	uint64_t max_range_per_epoch;
 	Workload * _wl;
 };
 

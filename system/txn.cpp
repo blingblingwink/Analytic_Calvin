@@ -331,6 +331,10 @@ void TxnManager::init(uint64_t thd_id, Workload * h_wl) {
   // write_set = (int *) mem_allocator.alloc(sizeof(int) * 100);
 #endif
 
+#if CC_ALG == ANALYTIC_CALVIN
+	enter_pending_cnt = 0;
+#endif
+
 	registed_ = false;
 	txn_ready = true;
 	twopl_wait_start = 0;
@@ -366,6 +370,10 @@ void TxnManager::reset() {
 	calvin_locked_rows.clear();
 #endif
 
+#if CC_ALG == ANALYTIC_CALVIN
+	enter_pending_cnt = 0;
+#endif
+
 	assert(txn);
 	assert(query);
 	txn->reset(get_thd_id());
@@ -397,6 +405,10 @@ void TxnManager::release() {
 	num_locks = 0;
 	memset(write_set, 0, 100);
 	// mem_allocator.free(write_set, sizeof(int) * 100);
+#endif
+
+#if CC_ALG == ANALYTIC_CALVIN
+	enter_pending_cnt = 0;
 #endif
 	txn_ready = true;
 }

@@ -273,6 +273,165 @@ char type2char(DATxnType txn_type)
   }
 }
 
+#if CC_ALG == ANALYTIC_CALVIN
+
+bool WorkerThread::handle_work_queue() {
+  Message* msg = work_queue.dequeue(get_thd_id());
+  if (!msg) {
+    return false;
+  }
+  txn_man = get_transaction_manager(msg);
+
+  // stats
+  txn_man->txn_stats.clear_short();
+  txn_man->txn_stats.msg_queue_time += msg->mq_time;
+  txn_man->txn_stats.msg_queue_time_short += msg->mq_time;
+  msg->mq_time = 0;
+  txn_man->txn_stats.work_queue_time += msg->wq_time;
+  txn_man->txn_stats.work_queue_time_short += msg->wq_time;
+  msg->wq_time = 0;
+  txn_man->txn_stats.work_queue_cnt += 1;
+
+  uint64_t ready_starttime = get_sys_clock();
+  bool ready = txn_man->unset_ready();
+  INC_STATS(get_thd_id(), worker_activate_txn_time, get_sys_clock() - ready_starttime);
+  if(!ready) {
+    // Return to work queue, end processing
+    work_queue.enqueue(get_thd_id(), msg, true);
+    return false;
+  }
+
+  txn_man->register_thread(this);
+  process(msg);
+
+  ready_starttime = get_sys_clock();
+  if(txn_man) {
+    bool ready = txn_man->set_ready();
+    assert(ready);
+  }
+  INC_STATS(get_thd_id(), worker_deactivate_txn_time, get_sys_clock() - ready_starttime);
+  return true;
+}
+
+bool WorkerThread::handle_pending_queue() {
+  txn_man = work_queue.pending_dequeue(_thd_id);
+  if (!txn_man) {
+    return false;
+  }
+
+  // stats
+  txn_man->txn_stats.clear_short();
+  txn_man->txn_stats.work_queue_cnt += 1;
+
+  uint64_t ready_starttime = get_sys_clock();
+  bool ready = txn_man->unset_ready();
+  INC_STATS(get_thd_id(), worker_activate_txn_time, get_sys_clock() - ready_starttime);
+  if(!ready) {
+    // Return to queue
+    work_queue.back_to_executable_queue(txn_man);
+    return false;
+  }
+
+  txn_man->register_thread(this);
+
+  process_pending_txn();
+  
+  ready_starttime = get_sys_clock();
+  if(txn_man) {
+    bool ready = txn_man->set_ready();
+    assert(ready);
+  }
+  INC_STATS(get_thd_id(), worker_deactivate_txn_time, get_sys_clock() - ready_starttime);
+  return true;
+}
+
+bool WorkerThread::handle_locking() {
+  Message * msg = work_queue.sched_dequeue(_thd_id);
+  if (!msg) {
+    return false;    
+  }
+
+  // watermark
+  uint64_t watermark = msg->get_txn_id();
+  watermarks[_thd_id].store(watermark, memory_order_release);
+  TMP_DEBUG("thd: %ld set watermark\n", _thd_id);
+  
+  assert(msg->get_rtype() == CL_QRY || msg->get_rtype() == CL_QRY_O);
+  assert(msg->get_txn_id() != UINT64_MAX);
+
+  txn_man = txn_table.get_transaction_manager(get_thd_id(), msg->get_txn_id(), msg->get_batch_id());
+  while (!txn_man->unset_ready()) {
+	}
+
+  assert(ISSERVERN(msg->get_return_id()));
+  txn_man->txn_stats.starttime = get_sys_clock();
+  txn_man->txn_stats.lat_network_time_start = msg->lat_network_time;
+  txn_man->txn_stats.lat_other_time_start = msg->lat_other_time;
+
+  msg->copy_to_txn(txn_man);
+  txn_man->register_thread(this);
+  assert(ISSERVERN(txn_man->return_id));
+
+  // Acquire locks
+  RC rc = RCOK;
+#if WORKLOAD == PPS
+  if (!txn_man->isRecon()) {
+    rc = txn_man->acquire_locks();
+  }
+#else
+  rc = txn_man->acquire_locks();
+#endif
+  if (rc == RCOK) {
+    if (watermark <= min_watermark.load()) {
+      process_pending_txn();
+    } else {
+      work_queue.pending_enqueue(txn_man, ++txn_man->enter_pending_cnt);
+    }
+  }
+
+  if(txn_man) { // txn may have finished, under which condition, txn_man is NULL
+    bool ready = txn_man->set_ready();
+    assert(ready);
+  }
+  return true;
+}
+
+void WorkerThread::process_pending_txn() {
+  uint64_t starttime = get_sys_clock();
+  DEBUG("START %ld %f %lu\n", txn_man->get_txn_id(), simulation->seconds_from_start(get_sys_clock()), txn_man->txn_stats.starttime);
+  assert(ISSERVERN(txn_man->return_id));
+  // execute
+  RC rc = txn_man->run_calvin_txn();
+  if(rc == RCOK && txn_man->calvin_exec_phase_done()) {
+    calvin_wrapup();
+  }
+
+  uint64_t timespan = get_sys_clock() - starttime;
+  INC_STATS(get_thd_id(),worker_process_cnt,1);
+  INC_STATS(get_thd_id(),worker_process_time,timespan);
+}
+
+RC WorkerThread::run() {
+  tsetup();
+  printf("Running WorkerThread %ld\n",_thd_id);
+
+  while(!simulation->is_done()) {
+    // handle remote txn first
+    while (handle_work_queue()) {
+    }
+    
+    while (handle_pending_queue()) {
+    }
+    // handle_work_queue();
+    // handle_pending_queue();
+    // then handle locking
+    handle_locking();
+  }
+  printf("FINISH %ld:%ld\n",_node_id,_thd_id);
+  fflush(stdout);
+  return FINISH;
+}
+#else
 RC WorkerThread::run() {
   tsetup();
   printf("Running WorkerThread %ld\n",_thd_id);
@@ -297,10 +456,10 @@ RC WorkerThread::run() {
       idle_starttime = 0;
     }
 
-    if((msg->rtype != CL_QRY && msg->rtype != CL_QRY_O) || CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN) {
+    if((msg->rtype != CL_QRY && msg->rtype != CL_QRY_O) || CC_ALG == CALVIN) {
       txn_man = get_transaction_manager(msg);
 
-      if (CC_ALG != CALVIN && CC_ALG != ANALYTIC_CALVIN && IS_LOCAL(txn_man->get_txn_id())) {
+      if (CC_ALG != CALVIN && IS_LOCAL(txn_man->get_txn_id())) {
         if (msg->rtype != RTXN_CONT &&
             ((msg->rtype != RACK_PREP) || (txn_man->get_rsp_cnt() == 1))) {
           txn_man->txn_stats.work_queue_time_short += msg->lat_work_queue_time;
@@ -314,7 +473,7 @@ RC WorkerThread::run() {
       } else {
           txn_man->txn_stats.clear_short();
       }
-      if (CC_ALG != CALVIN && CC_ALG != ANALYTIC_CALVIN) {
+      if (CC_ALG != CALVIN) {
         txn_man->txn_stats.lat_network_time_start = msg->lat_network_time;
         txn_man->txn_stats.lat_other_time_start = msg->lat_other_time;
       }
@@ -350,7 +509,7 @@ RC WorkerThread::run() {
 
     // delete message
     ready_starttime = get_sys_clock();
-#if CC_ALG != CALVIN && CC_ALG != ANALYTIC_CALVIN
+#if CC_ALG != CALVIN
     msg->release();
     delete msg;
 #endif
@@ -361,6 +520,7 @@ RC WorkerThread::run() {
   fflush(stdout);
   return FINISH;
 }
+#endif
 
 RC WorkerThread::process_rfin(Message * msg) {
   DEBUG("RFIN %ld\n",msg->get_txn_id());
@@ -948,3 +1108,27 @@ RC WorkerNumThread::run() {
   fflush(stdout);
   return FINISH;
 }
+
+#if CC_ALG == ANALYTIC_CALVIN
+void PendingHandleThread::setup() {
+}
+
+RC PendingHandleThread::run() {
+  tsetup();
+  printf("Running PendingHandleThread %ld\n",_thd_id);
+
+	while(!simulation->is_done()) {
+    // usleep(10);
+    uint64_t min_val = UINT64_MAX;
+    for (uint32_t i = 0; i < g_thread_cnt; i++) {
+      min_val = std::min(min_val, watermarks[i].load(memory_order_acquire));
+    }
+    min_watermark.store(min_val);
+    // pick runnable txn from pending queue
+    work_queue.pending_validate(_thd_id);
+	}
+  printf("FINISH %ld:%ld\n",_node_id,_thd_id);
+  fflush(stdout);
+  return FINISH;
+}
+#endif
