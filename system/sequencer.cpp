@@ -32,8 +32,9 @@
 
 void Sequencer::init(Workload * wl) {
 	next_txn_id = 0;
-	max_range_per_epoch = g_inflight_max * g_node_cnt;
-	offset = max_range_per_epoch * g_node_id;
+	max_range_per_epoch_per_node = g_inflight_max * g_node_cnt;
+	max_range_per_epoch = max_range_per_epoch_per_node * g_node_cnt;
+	offset = max_range_per_epoch_per_node * g_node_id;
 	rsp_cnt = g_node_cnt + g_client_node_cnt;
 	_wl = wl;
 	last_time_batch = 0;
@@ -53,7 +54,7 @@ void Sequencer::process_ack(Message * msg, uint64_t thd_id) {
 	assert(wait_list != NULL);
 	assert(en->txns_left > 0);
 
-	uint64_t id = msg->get_txn_id() - max_range_per_epoch * g_node_id - (en->epoch - 1) * max_range_per_epoch;
+	uint64_t id = msg->get_txn_id() - max_range_per_epoch_per_node * g_node_id - (en->epoch - 1) * max_range_per_epoch;
 	uint64_t prof_stat = get_sys_clock();
 	assert(wait_list[id].server_ack_cnt > 0);
 
@@ -317,6 +318,6 @@ void Sequencer::send_next_batch(uint64_t thd_id) {
 	}
 	INC_STATS(thd_id,seq_prep_time,get_sys_clock() - prof_stat);
 	next_txn_id = 0;
-	offset += max_range_per_epoch * g_node_cnt;
+	offset += max_range_per_epoch;
 }
 
