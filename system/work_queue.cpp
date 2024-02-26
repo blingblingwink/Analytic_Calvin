@@ -31,6 +31,7 @@ void QWorkQueue::init() {
 	sub_txn_queue = new boost::lockfree::queue<work_queue_entry* > (0);
 	new_txn_queue = new boost::lockfree::queue<work_queue_entry* >(0);
 	sched_queue = new boost::lockfree::queue<work_queue_entry* > * [g_node_cnt];
+	sched_ready = true;
 	for ( uint64_t i = 0; i < g_node_cnt; i++) {
 		sched_queue[i] = new boost::lockfree::queue<work_queue_entry* > (0);
 	}
@@ -124,8 +125,8 @@ Message * QWorkQueue::sched_dequeue(uint64_t thd_id) {
 	Message * msg = NULL;
 	work_queue_entry * entry = NULL;
 
+#if CC_ALG == CALVIN
 	bool valid = sched_queue[sched_ptr]->pop(entry);
-
 	if(valid) {
 
 		msg = entry->msg;
@@ -139,6 +140,9 @@ Message * QWorkQueue::sched_dequeue(uint64_t thd_id) {
 		mem_allocator.free(entry,sizeof(work_queue_entry));
 
 		if(msg->rtype == RDONE) {
+			// Advance to next queue or next epoch
+			DEBUG("Sched RDONE %ld %ld\n",sched_ptr,simulation->get_worker_epoch());
+			assert(msg->get_batch_id() == simulation->get_worker_epoch());
 			if(sched_ptr == g_node_cnt - 1) {
 				INC_STATS(thd_id,sched_epoch_cnt,1);
 				INC_STATS(thd_id,sched_epoch_diff,get_sys_clock()-simulation->last_worker_epoch_time);
@@ -147,14 +151,48 @@ Message * QWorkQueue::sched_dequeue(uint64_t thd_id) {
 			sched_ptr = (sched_ptr + 1) % g_node_cnt;
 			msg->release();
 			msg = NULL;
-
 		} else {
 			simulation->inc_epoch_txn_cnt();
+			DEBUG("Sched msg dequeue %ld (%ld,%ld) %ld\n", sched_ptr, msg->txn_id, msg->batch_id,
+						simulation->get_worker_epoch());
+			assert(msg->batch_id == simulation->get_worker_epoch());
 		}
 
 		INC_STATS(thd_id,sched_queue_dequeue_time,get_sys_clock() - starttime);
 	}
+#else
+	/*
+		sched_ready serves as spinlock, protecting concurrent accesses on sched_ptr
+		which ensures correct order of sched_queue dequeue, say, g_node_cnt = 2
+		pop all entries from sched_queue[0] until meeting RDONE, then move to next one
+		which is, pop all entries from sched_queue[1] until meering RDONE, 
+		then moving to sched_queue[0] again, and so on
+		when meeting RDONE from sched_queue[0], it is prohibited to still pop entry from sched_queue[0]
+	*/
+	while (!ATOM_CAS(sched_ready, true, false)) {
+	}
+	bool valid = sched_queue[sched_ptr]->pop(entry);
 
+	if(valid) {
+		msg = entry->msg;
+		if(msg->rtype == RDONE) {
+			sched_ptr = (sched_ptr + 1) % g_node_cnt;
+			ATOM_CAS(sched_ready, false, true);
+			msg->release();
+			msg = NULL;
+		} else {
+			ATOM_CAS(sched_ready, false, true);
+		}
+
+		uint64_t queue_time = get_sys_clock() - entry->starttime;
+		INC_STATS(thd_id,sched_queue_wait_time,queue_time);
+		INC_STATS(thd_id,sched_queue_cnt,1);
+		INC_STATS(thd_id,sched_queue_dequeue_time,get_sys_clock() - starttime);
+		mem_allocator.free(entry,sizeof(work_queue_entry));
+	} else {
+		ATOM_CAS(sched_ready, false, true);
+	}
+#endif
 	return msg;
 }
 

@@ -120,6 +120,7 @@ private:
 #endif
 
   uint64_t sched_ptr;
+  bool sched_ready;
   BaseQuery * last_sched_dq;
   uint64_t curr_epoch;
 

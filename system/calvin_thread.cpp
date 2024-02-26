@@ -55,15 +55,17 @@ RC CalvinLockThread::run() {
 			if (idle_starttime == 0) idle_starttime = get_sys_clock();
 			continue;
 		}
+
+		// watermark
+		uint64_t watermark = msg->get_txn_id();
+		assert(watermark > watermarks[id].load());
+		watermarks[id].store(watermark, memory_order_release);
+		TMP_DEBUG("thd: %ld set watermark: %ld\n", id, watermark);
+
 		if(idle_starttime > 0) {
 			INC_STATS(_thd_id,sched_idle_time,get_sys_clock() - idle_starttime);
 			idle_starttime = 0;
 		}
-
-		// watermark
-		uint64_t watermark = msg->get_txn_id();
-		watermarks[id].store(watermark, memory_order_release);
-		TMP_DEBUG("thd: %ld set watermark\n", id);
 		
 		prof_starttime = get_sys_clock();
 		assert(msg->get_rtype() == CL_QRY || msg->get_rtype() == CL_QRY_O);
@@ -85,6 +87,17 @@ RC CalvinLockThread::run() {
 		prof_starttime = get_sys_clock();
 
 		// Acquire locks
+		/* 	record current min_watermark BEFORE acquire_locks is NECESSARY
+			e.g. thread 0 fetches txn 0 to lock, thread 1 fetches txn 1 to lock, txn 0 conflict with txn 1 on item x, 
+			thread 1 acquires lock on x earlier than thread 0, believing it successfully gets lock on item x
+			but it takes longer for thread 1 to finish the whole locking process of txn 1,
+			then txn 0 will deprive lock on x from txn 1 and finishes the whole locking process earlier, 
+			then thread 0 fetches next txn to lock (txn 2)
+			finally, thread 1 finishes the whole locking process, finds current min_watermark is 1, 
+			call immediate_execute to execute txn 1, but acutally, txn 1 is not ready for now
+			record current min_watermark BEFORE acquire_locks can prevent such problems
+		*/
+		uint64_t cur_min_watermark = min_watermark.load();
 		RC rc = RCOK;
 #if WORKLOAD == PPS
 		if (!txn_man->isRecon()) {
@@ -94,7 +107,7 @@ RC CalvinLockThread::run() {
 		rc = txn_man->acquire_locks();
 #endif
 		if (rc == RCOK) {
-			if (watermark <= min_watermark.load()) {
+			if (watermark <= cur_min_watermark) {
 				// work_queue.enqueue(_thd_id, msg, false);
 				work_queue.immediate_execute(txn_man);
 			} else {
