@@ -21,6 +21,7 @@ for HOSTNAME in ${HOSTS}; do
 done
 
 # for perf, shut down in default, uncomment it to open
+# remember set DONE_TIMER and WARMUP_TIMER to 60 seconds to align with sleep 90
 # sleep 90
 # OLD_IFS="$IFS"
 # IFS=" "
