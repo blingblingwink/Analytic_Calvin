@@ -227,9 +227,11 @@ RC TPCCTxnManager::acquire_locks() {
 		default:
 			assert(false);
 	}
+#if CC_ALG != ANALYTIC_CALVIN
 	if(decr_lr() == 0) {
 		if (ATOM_CAS(lock_ready, false, true)) rc = RCOK;
 	}
+#endif
 	txn_stats.wait_starttime = get_sys_clock();
 	INC_STATS(get_thd_id(),calvin_sched_time,get_sys_clock() - starttime);
 	return rc;

@@ -332,7 +332,7 @@ void TxnManager::init(uint64_t thd_id, Workload * h_wl) {
 #endif
 
 #if CC_ALG == ANALYTIC_CALVIN
-	enter_pending_cnt = 0;
+	restart_cnt = 0;
 #endif
 
 	registed_ = false;
@@ -371,7 +371,7 @@ void TxnManager::reset() {
 #endif
 
 #if CC_ALG == ANALYTIC_CALVIN
-	enter_pending_cnt = 0;
+	restart_cnt = 0;
 #endif
 
 	assert(txn);
@@ -408,7 +408,7 @@ void TxnManager::release() {
 #endif
 
 #if CC_ALG == ANALYTIC_CALVIN
-	enter_pending_cnt = 0;
+	restart_cnt = 0;
 #endif
 	txn_ready = true;
 }
@@ -735,6 +735,26 @@ uint64_t TxnManager::incr_lr() {
 	return result;
 }
 
+#if CC_ALG == ANALYTIC_CALVIN
+uint64_t TxnManager::decr_lr(uint16_t &cnt) {
+	//ATOM_SUB(this->rsp_cnt,i);
+	uint64_t result;
+	sem_wait(&rsp_mutex);
+	result = --this->lock_ready_cnt;
+	cnt = ++restart_cnt;
+	sem_post(&rsp_mutex);
+	return result;
+}
+bool TxnManager::is_executable(uint16_t cnt) {
+	sem_wait(&rsp_mutex);
+	bool res = false;
+	if (lock_ready_cnt == 0 && cnt == restart_cnt) {
+		res = true;
+	}
+	sem_post(&rsp_mutex);
+	return res;
+}
+#endif
 uint64_t TxnManager::decr_lr() {
 	//ATOM_SUB(this->rsp_cnt,i);
 	uint64_t result;

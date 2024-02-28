@@ -51,7 +51,7 @@ RC Row_acalvin::lock_get(lock_t type, TxnManager * txn) {
       INC_STATS(txn->get_thd_id(),twopl_already_owned_cnt,1);
     }
 
-    
+    // TMP_DEBUG("txn: %ld try to lock on row: %ld\n", txn->get_txn_id(), _row->get_primary_key());
     LockEntry * entry = get_entry();
     entry->start_ts = get_sys_clock();
     entry->txn = txn;
@@ -159,6 +159,7 @@ RC Row_acalvin::lock_release(TxnManager * txn) {
         txn->get_batch_id(), owner_cnt, lock_type, _row->get_primary_key(), (uint64_t)_row);
 
     // Try to find the entry in the owners
+    // TMP_DEBUG("txn: %ld release lock on row: %ld\n", txn->get_txn_id(), _row->get_primary_key());
     LockEntry * en = owners_head;
     while (en && en->txn != txn) {
         en = en->next;
@@ -202,14 +203,27 @@ RC Row_acalvin::lock_release(TxnManager * txn) {
         LIST_PUT_TAIL(owners_head, owners_tail, entry);
         owner_cnt++;
 
-        ASSERT(entry->txn->lock_ready == false);
-        if (entry->txn->decr_lr() == 0) {
+
+        /*
+            imagine a scenario, thread 0 fetches txn 0 to lock, thread 1 fetches txn 1 to lock
+            thread 1 txn 1 acquires all locks sucessfully, then calls decr_lr() == 0, 
+            but before executing ATOM_CAS(lock_ready, false, true), thread 0 txn 0 finds it conflicts with txn 1 during locking process
+            so it deprives lock from txn 1, and calls incr_lr() of txn 1, executes ATOM_CAS(txn->lock_ready, true, false)
+            then thread 1 continues to do ATOM_CAS(lock_ready, false, true)
+            now you encounter a weird situation, txn 1's lock ready is true, but it is not executable
+            and after txn 0 releases its lock, makes txn 1 lock's owner, it encounters another weird situation,
+            which is, below statement fails, ASSERT(entry->txn->lock_ready == false) DOES NOT hold
+            So, we give up using lock_ready, instead, we use lock_ready_cnt and restart_cnt to check if a txn is executable
+            for more information, refer to txn.h
+        */
+        // ASSERT(entry->txn->lock_ready == false);
+        uint16_t cnt;
+        if (entry->txn->decr_lr(cnt) == 0) {
             entry->txn->txn_stats.cc_block_time += timespan;
             entry->txn->txn_stats.cc_block_time_short += timespan;
 
             // put into validation queue
-            auto cnt = ++entry->txn->enter_pending_cnt;
-            ATOM_CAS(entry->txn->lock_ready, false, true);
+            // ATOM_CAS(entry->txn->lock_ready, false, true);
             TMP_DEBUG("restart pending enqueue: %ld\n", entry->txn->get_txn_id());
             work_queue.pending_enqueue(entry->txn, cnt);
         }
@@ -271,7 +285,7 @@ RC Row_acalvin::lock_succeeded(TxnManager *txn, lock_t type) {
 }
 
 RC Row_acalvin::lock_failed(TxnManager *txn) {
-    ATOM_CAS(txn->lock_ready, true, false);
+    // ATOM_CAS(txn->lock_ready, true, false);
     txn->incr_lr();
     return WAIT;
 }
@@ -281,9 +295,20 @@ void Row_acalvin::deprive_lock(LockEntry *start) {
     while (en != NULL) {
         owner_cnt--;
         en->txn->incr_lr();
-        ATOM_CAS(en->txn->lock_ready, true, false);
+        // ATOM_CAS(en->txn->lock_ready, true, false);
         en = en->next;
     }
 }
+
+void Row_acalvin::move_to_waiter(LockEntry *start, LockEntry *end) {
+    if (waiters_head == NULL) {
+        waiters_head = start;
+        waiters_tail = end;
+    } else {
+        end->next = waiters_head;
+        waiters_head->prev = end;
+        waiters_head = start;
+    }
+};
 
 #endif

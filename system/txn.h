@@ -178,6 +178,10 @@ public:
 	uint64_t        incr_rsp(int i);
 	uint64_t        decr_rsp(int i);
 	uint64_t        incr_lr();
+#if CC_ALG == ANALYTIC_CALVIN
+	uint64_t        decr_lr(uint16_t &cnt);
+	bool			is_executable(uint16_t cnt);
+#endif
 	uint64_t        decr_lr();
 
 	RC commit();
@@ -307,7 +311,7 @@ public:
 #endif
 
 #if CC_ALG == ANALYTIC_CALVIN
-	std::atomic<uint16_t> enter_pending_cnt;
+	std::atomic<uint16_t> restart_cnt;	//	serve as deduplication, some txns may enter pending queue multiple times
 #endif
 
 protected:

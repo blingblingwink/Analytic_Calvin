@@ -421,7 +421,7 @@ void QWorkQueue::pending_validate(uint64_t thd_id) {
 		if (it->txn->get_txn_id() > watermark) {
 			it++;
 		} else {
-			if (it->txn->lock_ready == true && it->txn->enter_pending_cnt == it->cnt) {
+			if (it->txn->is_executable(it->cnt)) {
 				send_txn(it->txn);
 			}
 			it = validation_queue.to_be_validate.erase(it);
@@ -434,21 +434,16 @@ void QWorkQueue::pending_validate(uint64_t thd_id) {
 		if (element.txn->get_txn_id() > watermark) {
 			validation_queue.to_be_validate.push_back(element);
 		} else {
-			if (element.txn->lock_ready == true && element.txn->enter_pending_cnt == element.cnt) {
+			if (element.txn->is_executable(element.cnt)) {
 				send_txn(element.txn);
 			}
 		}
 	}
 
-	TMP_DEBUG("watermark: %ld executable: %ld\n", watermark, handled);
+	// TMP_DEBUG("watermark: %ld executable: %ld\n", watermark, handled);
 }
 
 void QWorkQueue::back_to_executable_queue(TxnManager *txn) {
-	while (!validation_queue.executable_txn_queue.push(txn) && !simulation->is_done()) {
-	}
-}
-
-void QWorkQueue::immediate_execute(TxnManager *txn) {
 	while (!validation_queue.executable_txn_queue.push(txn) && !simulation->is_done()) {
 	}
 }

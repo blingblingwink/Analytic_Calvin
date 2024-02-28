@@ -87,17 +87,6 @@ RC CalvinLockThread::run() {
 		prof_starttime = get_sys_clock();
 
 		// Acquire locks
-		/* 	record current min_watermark BEFORE acquire_locks is NECESSARY
-			e.g. thread 0 fetches txn 0 to lock, thread 1 fetches txn 1 to lock, txn 0 conflict with txn 1 on item x, 
-			thread 1 acquires lock on x earlier than thread 0, believing it successfully gets lock on item x
-			but it takes longer for thread 1 to finish the whole locking process of txn 1,
-			then txn 0 will deprive lock on x from txn 1 and finishes the whole locking process earlier, 
-			then thread 0 fetches next txn to lock (txn 2)
-			finally, thread 1 finishes the whole locking process, finds current min_watermark is 1, 
-			call immediate_execute to execute txn 1, but acutally, txn 1 is not ready for now
-			record current min_watermark BEFORE acquire_locks can prevent such problems
-		*/
-		uint64_t cur_min_watermark = min_watermark.load();
 		RC rc = RCOK;
 #if WORKLOAD == PPS
 		if (!txn_man->isRecon()) {
@@ -106,15 +95,12 @@ RC CalvinLockThread::run() {
 #else
 		rc = txn_man->acquire_locks();
 #endif
-		if (rc == RCOK) {
-			if (watermark <= cur_min_watermark) {
-				// work_queue.enqueue(_thd_id, msg, false);
-				work_queue.immediate_execute(txn_man);
-			} else {
-				work_queue.pending_enqueue(txn_man, ++txn_man->enter_pending_cnt);
-			}
+		uint16_t cnt;
+		if(txn_man->decr_lr(cnt) == 0) {
+			// if (ATOM_CAS(lock_ready, false, true)) rc = RCOK;
+			work_queue.pending_enqueue(txn_man, cnt);
 		}
-
+		
 		txn_man->set_ready();
 
 		INC_STATS(_thd_id,mtx[33],get_sys_clock() - prof_starttime);
