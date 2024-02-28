@@ -36,6 +36,7 @@ private:
     RC lock_succeeded(TxnManager *txn, lock_t type);
     RC lock_failed(TxnManager *txn);
     void deprive_lock(LockEntry *start);
+    void move_to_waiter(LockEntry *start, LockEntry *end);
 	row_t * _row;
     lock_t lock_type;
     UInt32 owner_cnt;

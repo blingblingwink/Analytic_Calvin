@@ -62,32 +62,31 @@ RC Row_acalvin::lock_get(lock_t type, TxnManager * txn) {
         rc = lock_succeeded(txn, type);
     } else {
         bool isConflict = conflict_check(type);
-        // txns MUST be ordered either in owners list or waiters list
+        // txns MUST be ordered both in owners list and waiters list, ascending order on txn_id
         // even though lock_type is LOCK_SH, the above must be assured 
         // since owners list may be truncated from the middle by a old txn
         if (owners_tail->txn->get_txn_id() < txn->get_txn_id()) {   // new txn compared to owners_tail
-            auto en = truncate_list(waiters_head, txn->get_txn_id());
+            auto pos = truncate_list(waiters_head, txn->get_txn_id());
             
-            if (!isConflict && (waiters_head == NULL || en == waiters_head)) {
+            if (!isConflict && (waiters_head == NULL || pos == waiters_head)) {
                 // the txn is not conflict with owners_list, AND waiters_list is empty or the txn is older than waiters_head
                 // put into owners_list
                 LIST_PUT_TAIL(owners_head, owners_tail, entry);
                 rc = lock_succeeded(txn, type);
             } else {
                 // the txn is conflict with owners_list OR the txn should be placed into waiters_list
-                if (waiters_head == NULL || en == NULL) {  // waiters_list is empty or the txn is newer than waiters_tail
+                if (waiters_head == NULL || pos == NULL) {  // waiters_list is empty or the txn is newer than waiters_tail
                     LIST_PUT_TAIL(waiters_head, waiters_tail, entry);
-                    rc = lock_failed(txn);
                 } else {    // the txn is older than waiters_head or the txn should be placed in the middle
-                    LIST_INSERT_BEFORE(en, entry, waiters_head);
-                    rc = lock_failed(txn);
+                    LIST_INSERT_BEFORE(pos, entry, waiters_head);
                 }
+                rc = lock_failed(txn);
             }
         } else {    // old txn compared to owners_tail
             // note that owners_list is not empty for now
-            auto en = truncate_list(owners_head, txn->get_txn_id());
+            auto pos = truncate_list(owners_head, txn->get_txn_id());
             if (!isConflict) {  // lock_type and type are both LOCK_SH, put into correct position
-                LIST_INSERT_BEFORE(en, entry, owners_head);
+                LIST_INSERT_BEFORE(pos, entry, owners_head);
                 rc = lock_succeeded(txn, type);
             } else {
                 /* there are 4 cases when conflict happens
@@ -99,39 +98,31 @@ RC Row_acalvin::lock_get(lock_t type, TxnManager * txn) {
                 */
 
                 /*  truncate owners_list, put these txns into waiters_list, structured like below
-                    owners_head --- new_owners_tail --- en --- old_owners_tail
+                    owners_head  --- pos --- original_owners_tail
                     waiters_head --- waiters_tail
                 */
-                auto new_owners_tail = en->prev, old_owners_tail = owners_tail;
-                en->prev = NULL;
 
-                // deprive lock from en to owners_tail
-                deprive_lock(en);
+                // deprive lock from pos to owners_tail
+                deprive_lock(pos);
 
-                if (en != owners_head) {    // case 2, txn iteself should become waiter, add it
-                    en->prev = entry;
-                    entry->next = en;
-                    entry->prev = NULL;
-                    en = entry;
-
-                    owners_tail = new_owners_tail;
+                if (pos != owners_head) {   // case 2, txn iteself should become waiter, add it
+                    auto original_owners_tail = owners_tail;
+                    assert(lock_type == LOCK_SH && type == LOCK_EX && owners_head->txn->get_txn_id() < txn->get_txn_id());
+                    // set new owners tail
+                    owners_tail = pos->prev;
                     owners_tail->next = NULL;
+
+                    // link entry and pos
+                    pos->prev = entry;
+                    entry->next = pos;
+
+                    // put into waiter list
+                    move_to_waiter(entry, original_owners_tail);
                     rc = lock_failed(txn);
-                } else {
-                    // case 1, 3, 4, txn itself become the only owner for now
-                    lock_type = type;
+                } else {    // case 1, 3, 4, txn itself become the only owner for now
+                    move_to_waiter(owners_head, owners_tail);
                     owners_head = owners_tail = entry;
                     rc = lock_succeeded(txn, type);
-                }
-                
-                // move corresponding txns to waiters_list
-                if (waiters_head == NULL) {
-                    waiters_head = en;
-                    waiters_tail = old_owners_tail;
-                } else {
-                    old_owners_tail->next = waiters_head;
-                    waiters_head->prev = old_owners_tail;
-                    waiters_head = en;
                 }
             }
         }
