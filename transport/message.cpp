@@ -1465,7 +1465,7 @@ uint64_t YCSBQueryMessage::get_size() {
 
 void YCSBQueryMessage::copy_from_txn(TxnManager * txn) {
   QueryMessage::copy_from_txn(txn);
-  requests.init(g_req_per_query);
+  requests.init(g_long_req_per_query);
   ((YCSBTxnManager*)txn)->copy_remote_requests(this);
   //requests.copy(((YCSBQuery*)(txn->query))->requests);
 }
@@ -1488,7 +1488,7 @@ void YCSBQueryMessage::copy_from_buf(char * buf) {
   uint64_t ptr = QueryMessage::get_size();
   size_t size;
   COPY_VAL(size,buf,ptr);
-  assert(size<=g_req_per_query);
+  assert(size<=g_long_req_per_query);
   requests.init(size);
   for(uint64_t i = 0 ; i < size;i++) {
     DEBUG_M("YCSBQueryMessage::copy ycsb_request alloc\n");

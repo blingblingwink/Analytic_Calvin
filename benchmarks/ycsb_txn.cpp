@@ -52,7 +52,8 @@ RC YCSBTxnManager::acquire_locks() {
   YCSBQuery* ycsb_query = (YCSBQuery*) query;
   RC rc = RCOK;
   incr_lr();
-  assert(ycsb_query->requests.size() == g_req_per_query);
+  // add long txn into workload, this assert does not make sense anymore
+  // assert(ycsb_query->requests.size() == g_req_per_query);
   assert(phase == CALVIN_RW_ANALYSIS);
 	for (uint32_t rid = 0; rid < ycsb_query->requests.size(); rid ++) {
 		ycsb_request * req = ycsb_query->requests[rid];

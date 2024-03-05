@@ -72,7 +72,7 @@ void YCSBQuery::print() {
 }
 
 void YCSBQuery::init() {
-	requests.init(g_req_per_query);
+	requests.init(g_long_req_per_query);
 	BaseQuery::init();
 }
 
@@ -88,7 +88,7 @@ void YCSBQuery::copy_request_to_msg(YCSBQuery * ycsb_query, YCSBQueryMessage * m
 
 void YCSBQuery::release_requests() {
 	// A bit of a hack to ensure that original requests in client query queue aren't freed
-	if (SERVER_GENERATE_QUERIES && requests.size() == g_req_per_query) return;
+	// if (SERVER_GENERATE_QUERIES && requests.size() == g_req_per_query) return;
 	for(uint64_t i = 0; i < requests.size(); i++) {
 		DEBUG_M("YCSBQuery::release() ycsb_request free\n");
 		mem_allocator.free(requests[i],sizeof(ycsb_request));
@@ -195,7 +195,10 @@ uint64_t YCSBQueryGenerator::zipf(uint64_t n, double theta) {
 
 BaseQuery * YCSBQueryGenerator::gen_requests_hot(uint64_t home_partition_id, Workload * h_wl) {
 	YCSBQuery * query = (YCSBQuery*) mem_allocator.alloc(sizeof(YCSBQuery));
-	query->requests.init(g_req_per_query);
+
+	double r_long_txn = (double)(mrand->next() % 10000) / 10000;
+	uint32_t req_per_query = r_long_txn < g_long_txn_perc? g_long_req_per_query: g_short_req_per_query;
+	query->requests.init(req_per_query);
 
 	uint64_t access_cnt = 0;
 	set<uint64_t> all_keys;
@@ -210,7 +213,7 @@ BaseQuery * YCSBQueryGenerator::gen_requests_hot(uint64_t home_partition_id, Wor
 	double r_twr = (double)(mrand->next() % 10000) / 10000;
 
 	int rid = 0;
-	for (UInt32 i = 0; i < g_req_per_query; i ++) {
+	for (UInt32 i = 0; i < req_per_query; i ++) {
 		double r = (double)(mrand->next() % 10000) / 10000;
 		double hot =  (double)(mrand->next() % 10000) / 10000;
 		uint64_t partition_id;
@@ -245,7 +248,7 @@ BaseQuery * YCSBQueryGenerator::gen_requests_hot(uint64_t home_partition_id, Wor
 				partition_id = row_id % g_part_cnt;
 
 				if (g_strict_ppt && partitions_accessed.size() < part_limit &&
-						(partitions_accessed.size() + (g_req_per_query - rid) >= part_limit) &&
+						(partitions_accessed.size() + (req_per_query - rid) >= part_limit) &&
 						partitions_accessed.count(partition_id) > 0)
 					continue;
 				if (partitions_accessed.count(partition_id) > 0) break;
@@ -264,7 +267,7 @@ BaseQuery * YCSBQueryGenerator::gen_requests_hot(uint64_t home_partition_id, Wor
 			all_keys.insert(req->key);
 			access_cnt ++;
 		} else {
-			// Need to have the full g_req_per_query amount
+			// Need to have the full req_per_query amount
 			i--;
 			continue;
 		}
@@ -273,7 +276,7 @@ BaseQuery * YCSBQueryGenerator::gen_requests_hot(uint64_t home_partition_id, Wor
 		//query->requests.push_back(*req);
 		query->requests.add(req);
 	}
-	assert(query->requests.size() == g_req_per_query);
+	assert(query->requests.size() == req_per_query);
 	// Sort the requests in key order.
 	if (g_key_order) {
 		for(uint64_t i = 0; i < query->requests.size(); i++) {
@@ -298,7 +301,10 @@ BaseQuery * YCSBQueryGenerator::gen_requests_hot(uint64_t home_partition_id, Wor
 BaseQuery * YCSBQueryGenerator::gen_requests_zipf(uint64_t home_partition_id, Workload * h_wl) {
 	YCSBQuery * query = (YCSBQuery*) mem_allocator.alloc(sizeof(YCSBQuery));
 	new(query) YCSBQuery();
-	query->requests.init(g_req_per_query);
+
+	double r_long_txn = (double)(mrand->next() % 10000) / 10000;
+	uint32_t req_per_query = r_long_txn < g_long_txn_perc? g_long_req_per_query: g_short_req_per_query;
+	query->requests.init(req_per_query);
 
 	uint64_t access_cnt = 0;
 	set<uint64_t> all_keys;
@@ -308,7 +314,7 @@ BaseQuery * YCSBQueryGenerator::gen_requests_zipf(uint64_t home_partition_id, Wo
 	double r_twr = (double)(mrand->next() % 10000) / 10000;
 
 	int rid = 0;
-	for (UInt32 i = 0; i < g_req_per_query; i ++) {
+	for (UInt32 i = 0; i < req_per_query; i ++) {
 		double r = (double)(mrand->next() % 10000) / 10000;
 		uint64_t partition_id;
 #ifdef LESS_DIS
@@ -353,7 +359,7 @@ BaseQuery * YCSBQueryGenerator::gen_requests_zipf(uint64_t home_partition_id, Wo
 			all_keys.insert(req->key);
 			access_cnt ++;
 		} else {
-			// Need to have the full g_req_per_query amount
+			// Need to have the full req_per_query amount
 			i--;
 			continue;
 		}
@@ -362,7 +368,7 @@ BaseQuery * YCSBQueryGenerator::gen_requests_zipf(uint64_t home_partition_id, Wo
 
 		query->requests.add(req);
 	}
-	assert(query->requests.size() == g_req_per_query);
+	assert(query->requests.size() == req_per_query);
 	// Sort the requests in key order.
 	if (g_key_order) {
 		for(uint64_t i = 0; i < query->requests.size(); i++) {

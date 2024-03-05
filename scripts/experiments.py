@@ -72,18 +72,17 @@ def ycsb_scaling():
     nnodes = [2]
     algos=['CALVIN']
     base_table_size=1048576*8
-    txn_write_perc = [0.0]
-    tup_write_perc = [0.0]
+    long_txn_perc = [0.0]
     load = [10000]
+    sched_cnt = [2]
     tcnt = [4]
     ctcnt = [4]
     scnt = [2]
     rcnt = [2]
-    skew = [0.5]
-    fmt = ["WORKLOAD","NODE_CNT","CC_ALG","SYNTH_TABLE_SIZE","TUP_WRITE_PERC","TXN_WRITE_PERC","MAX_TXN_IN_FLIGHT","ZIPF_THETA","THREAD_CNT","CLIENT_THREAD_CNT","SEND_THREAD_CNT","REM_THREAD_CNT","CLIENT_SEND_THREAD_CNT","CLIENT_REM_THREAD_CNT"]
-    exp = [[wl,n,algo,base_table_size*n,tup_wr_perc,txn_wr_perc,ld,sk,thr,cthr,sthr,rthr,sthr,rthr] \
-           for thr,cthr,sthr,rthr,txn_wr_perc,tup_wr_perc,sk,ld,n,algo in \
-           itertools.product(tcnt,ctcnt,scnt,rcnt,txn_write_perc,tup_write_perc,skew,load,nnodes,algos)]
+    fmt = ["WORKLOAD","NODE_CNT","CC_ALG","SYNTH_TABLE_SIZE","TUP_WRITE_PERC","TXN_WRITE_PERC","LONG_TXN_PERC","MAX_TXN_IN_FLIGHT","ZIPF_THETA","SCHEDULER_THREAD_CNT","THREAD_CNT","CLIENT_THREAD_CNT","SEND_THREAD_CNT","REM_THREAD_CNT","CLIENT_SEND_THREAD_CNT","CLIENT_REM_THREAD_CNT"]
+    exp = [[wl,n,algo,base_table_size*n,tup_wr_perc,txn_wr_perc,long_perc,ld,sk,schedthr,thr,cthr,sthr,rthr,sthr,rthr] \
+           for schedthr,thr,cthr,sthr,rthr,txn_wr_perc,tup_wr_perc,long_perc,sk,ld,n,algo in \
+           itertools.product(sched_cnt,tcnt,ctcnt,scnt,rcnt,txn_write_perc,tup_write_perc,long_txn_perc,skew,load,nnodes,algos)]
     return fmt,exp
 
 def ycsb_scaling1():

@@ -115,7 +115,7 @@ void parser(int argc, char * argv[]) {
     else if (argv[i][1] == 'p' && argv[i][2] == 'p' && argv[i][3] == 't')
       g_part_per_txn = atoi( &argv[i][4] );
     else if (argv[i][1] == 'r' && argv[i][2] == 'p' && argv[i][3] == 'q')
-      g_req_per_query = atoi( &argv[i][4] );
+      g_short_req_per_query = atoi( &argv[i][4] );
     else if (argv[i][1] == 'c' && argv[i][2] == 'n')
       g_client_node_cnt = atoi( &argv[i][3] );
     else if (argv[i][1] == 't' && argv[i][2] == 'r')
@@ -228,7 +228,7 @@ void parser(int argc, char * argv[]) {
 			printf("g_mpr %f\n",g_mpr );
 			printf("g_mpitem %f\n",g_mpitem );
       printf("g_part_per_txn %d\n",g_part_per_txn );
-      printf("g_req_per_query %d\n",g_req_per_query );
+      printf("g_short_req_per_query %d\n",g_short_req_per_query );
       printf("g_client_node_cnt %d\n",g_client_node_cnt );
       printf("g_rem_thread_cnt %d\n",g_rem_thread_cnt );
       printf("g_send_thread_cnt %d\n",g_send_thread_cnt );

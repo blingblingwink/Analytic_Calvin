@@ -241,7 +241,10 @@
 #define SCAN_LEN          20
 #define PART_PER_TXN 2
 #define PERC_MULTI_PART     MPR
-#define REQ_PER_QUERY 10
+#define REQ_PER_QUERY 10  // normal txn size
+// long txn size, but under YCSB workload, requests should be initialized using this value to ensure enough capacity
+#define LONG_REQ_PER_QUERY 50
+#define LONG_TXN_PERC 0.0
 #define FIELD_PER_TUPLE       10
 #define CREATE_TXN_FILE false
 #define STRICT_PPT 0
