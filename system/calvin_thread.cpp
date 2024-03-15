@@ -87,13 +87,13 @@ RC CalvinLockThread::run() {
 		prof_starttime = get_sys_clock();
 
 		// Acquire locks
-		RC rc = RCOK;
 #if WORKLOAD == PPS
+		RC rc = RCOK;
 		if (!txn_man->isRecon()) {
 			rc = txn_man->acquire_locks();
 		}
 #else
-		rc = txn_man->acquire_locks();
+		txn_man->acquire_locks();
 #endif
 		uint16_t cnt;
 		if(txn_man->decr_lr(cnt) == 0) {

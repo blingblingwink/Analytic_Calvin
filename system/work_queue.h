@@ -101,7 +101,8 @@ public:
   Message* top_element;
 
 private:
-  boost::lockfree::queue<work_queue_entry* > * sub_txn_queue; // txns apart from CL_QRY, e.g. RTXN, RFWD
+  // under ANALYTIC_CALVIN, client query, sub client query shall appear in validation queue instead of new_txn_queue
+  boost::lockfree::queue<work_queue_entry* > * work_queue; // txns apart from CL_QRY, e.g. RTXN, RFWD
   boost::lockfree::queue<work_queue_entry* > * new_txn_queue; // CL_QRY
   boost::lockfree::queue<work_queue_entry* > * seq_queue;
   boost::lockfree::queue<work_queue_entry* > ** sched_queue;

@@ -28,7 +28,7 @@ void QWorkQueue::init() {
 	sched_ptr = 0;
 
 	seq_queue = new boost::lockfree::queue<work_queue_entry* > (0);
-	sub_txn_queue = new boost::lockfree::queue<work_queue_entry* > (0);
+	work_queue = new boost::lockfree::queue<work_queue_entry* > (0);
 	new_txn_queue = new boost::lockfree::queue<work_queue_entry* >(0);
 	sched_queue = new boost::lockfree::queue<work_queue_entry* > * [g_node_cnt];
 	sched_ready = true;
@@ -210,6 +210,14 @@ void QWorkQueue::enqueue(uint64_t thd_id, Message * msg,bool busy) {
 	DEBUG("Work Enqueue (%ld,%ld) %d\n",entry->txn_id,entry->batch_id,entry->rtype);
 
 	uint64_t mtx_wait_starttime = get_sys_clock();
+#if CC_ALG == ANALYTIC_CALVIN
+	while (!work_queue->push(entry) && !simulation->is_done()) {
+	}
+	sem_wait(&_semaphore);
+	work_queue_size ++;
+	work_enqueue_size ++;
+	sem_post(&_semaphore);
+#else
 	if(msg->rtype == CL_QRY || msg->rtype == CL_QRY_O) {
 		while (!new_txn_queue->push(entry) && !simulation->is_done()) {
 		}
@@ -218,13 +226,14 @@ void QWorkQueue::enqueue(uint64_t thd_id, Message * msg,bool busy) {
 		txn_enqueue_size ++;
 		sem_post(&_semaphore);
 	} else {
-		while (!sub_txn_queue->push(entry) && !simulation->is_done()) {
+		while (!work_queue->push(entry) && !simulation->is_done()) {
 		}
 		sem_wait(&_semaphore);
 		work_queue_size ++;
 		work_enqueue_size ++;
 		sem_post(&_semaphore);
 	}
+#endif
 	INC_STATS(thd_id,mtx[13],get_sys_clock() - mtx_wait_starttime);
 
 	if(busy) {
@@ -262,13 +271,16 @@ Message * QWorkQueue::dequeue(uint64_t thd_id) {
 	uint64_t mtx_wait_starttime = get_sys_clock();
 	bool valid = false;
 
+#if CC_ALG == ANALYTIC_CALVIN
+	valid = work_queue->pop(entry);
+#else
 #ifdef THD_ID_QUEUE
 	if (thd_id < THREAD_CNT / 2)
-		valid = sub_txn_queue->pop(entry);
+		valid = work_queue->pop(entry);
 	else
 		valid = new_txn_queue->pop(entry);
 #else
-	valid = sub_txn_queue->pop(entry);
+	valid = work_queue->pop(entry);
 	if(!valid) {
 #if SERVER_GENERATE_QUERIES
 		if(ISSERVER) {
@@ -282,6 +294,7 @@ Message * QWorkQueue::dequeue(uint64_t thd_id) {
 		valid = new_txn_queue->pop(entry);
 #endif
 	}
+#endif
 #endif
 	INC_STATS(thd_id,mtx[14],get_sys_clock() - mtx_wait_starttime);
 
@@ -335,7 +348,7 @@ Message * QWorkQueue::queuetop(uint64_t thd_id)
 	Message * msg = NULL;
 	work_queue_entry * entry = NULL;
 	uint64_t mtx_wait_starttime = get_sys_clock();
-	bool valid = sub_txn_queue->pop(entry);
+	bool valid = work_queue->pop(entry);
 	if(!valid) {
 #if SERVER_GENERATE_QUERIES
 		if(ISSERVER) {
