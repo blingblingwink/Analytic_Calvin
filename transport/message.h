@@ -36,6 +36,7 @@ public:
   static Message * create_message(uint64_t txn_id,uint64_t batch_id, RemReqType rtype);
   static Message * create_message(LogRecord * record, RemReqType rtype);
   static Message * create_message(RemReqType rtype);
+  static Message * create_submessage(Message *original_msg, size_t start, size_t end, uint8_t *pNum);
   static std::vector<Message*> * create_messages(char * buf);
   static void release_message(Message * msg);
   RemReqType rtype;
@@ -290,6 +291,11 @@ public:
 
   Array<ycsb_request*> requests;
 
+};
+
+class YCSBSubClientQueryMessage : public YCSBClientQueryMessage {
+public:
+  uint8_t * piecesRemained;  // number of sub txns, this value works locally only, so no need to pass it through network
 };
 
 class TPCCClientQueryMessage : public ClientQueryMessage {

@@ -301,6 +301,7 @@ enum RemReqType {
     CL_QRY_O,//one server but use the msg queue
     RQRY,
     RQRY_CONT,
+    SUB_CL_QRY,
     RFIN,
     RLK_RSP,
     RULK_RSP,

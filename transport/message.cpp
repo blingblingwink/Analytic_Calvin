@@ -183,6 +183,12 @@ Message * Message::create_message(RemReqType rtype) {
 #endif
       msg->init();
       break;
+    case SUB_CL_QRY:
+#if WORKLOAD == YCSB
+      msg = new YCSBSubClientQueryMessage;
+#endif
+      msg->init();
+      break;
     case RPREPARE:
       msg = new PrepareMessage;
       break;
@@ -215,6 +221,25 @@ Message * Message::create_message(RemReqType rtype) {
   msg->lat_network_time = 0;
   msg->lat_other_time = 0;
 
+
+  return msg;
+}
+
+Message* Message::create_submessage(Message *original_msg, size_t start, size_t end, uint8_t *pNum) {
+  auto msg = create_message(SUB_CL_QRY);
+  msg->return_node_id = original_msg->return_node_id;
+  
+  auto msg_for_ease = static_cast<YCSBSubClientQueryMessage*>(msg);
+  auto requests_for_ease = static_cast<YCSBClientQueryMessage*>(original_msg)->requests;
+
+  msg_for_ease->partitions.clear();
+  msg_for_ease->partitions.copy(((YCSBClientQueryMessage*)original_msg)->partitions);
+  msg_for_ease->requests.init(end - start);
+  for (size_t i = start; i < end; i++) {
+    msg_for_ease->requests.add(requests_for_ease[i]);
+  }
+
+  msg_for_ease->piecesRemained = pNum;
 
   return msg;
 }
@@ -283,7 +308,7 @@ void Message::mcopy_to_buf(char * buf) {
   COPY_BUF(buf,lat_cc_block_time,ptr);
   COPY_BUF(buf,lat_cc_time,ptr);
   COPY_BUF(buf,lat_process_time,ptr);
-  if (((CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN) && (rtype == CL_QRY||rtype == CL_QRY_O) && txn_id % g_node_cnt == g_node_id) ||
+  if (((CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN) && (rtype == CL_QRY || rtype == SUB_CL_QRY ||rtype == CL_QRY_O) && txn_id % g_node_cnt == g_node_id) ||
       (CC_ALG != CALVIN && CC_ALG != ANALYTIC_CALVIN && IS_LOCAL(txn_id))) {
     lat_network_time = get_sys_clock();
   } else {
@@ -372,6 +397,14 @@ void Message::release_message(Message * msg) {
       delete m_msg;
       break;
                     }
+    case SUB_CL_QRY: {
+#if WORKLOAD == YCSB
+      auto m_msg = static_cast<YCSBSubClientQueryMessage*>(msg);
+      m_msg->release();
+      delete m_msg;
+      break;
+#endif
+    }
     case RPREPARE: {
       PrepareMessage * m_msg = (PrepareMessage*)msg;
       m_msg->release();

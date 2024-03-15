@@ -57,6 +57,11 @@ class Sequencer {
 	void process_txn(Message* msg, uint64_t thd_id, uint64_t early_start, uint64_t last_start,
 									 uint64_t wait_time, uint32_t abort_cnt);
 	void send_next_batch(uint64_t thd_id);
+#if WORKLOAD == YCSB
+	void split_msg(Message *msg);
+	void process_long_txn(Message *msg, uint64_t thd_id);
+	void check_contention(Message *msg);
+#endif
 
  private:
 	void reset_participating_nodes(bool * part_nodes);
@@ -64,6 +69,7 @@ class Sequencer {
 	vector<queue<Message*>> fill_queue;
 #if WORKLOAD == YCSB
 	YCSBQuery* node_queries;
+	std::vector<Message*> splitted_msgs;
 #elif WORKLOAD == TPCC
 	TPCCQuery* node_queries;
 #elif WORKLOAD == PPS

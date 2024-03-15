@@ -60,7 +60,7 @@ void WorkerThread::statqueue(uint64_t thd_id, Message * msg, uint64_t starttime)
              msg->rtype == RFWD){
     uint64_t queue_time = get_sys_clock() - starttime;
 		INC_STATS(thd_id,trans_remote_process,queue_time);
-  } else if (msg->rtype == CL_QRY || msg->rtype == CL_QRY_O) {
+  } else if (msg->rtype == CL_QRY || msg->rtype == SUB_CL_QRY || msg->rtype == CL_QRY_O) {
     uint64_t queue_time = get_sys_clock() - starttime;
     INC_STATS(thd_id,trans_process_client,queue_time);
   }
@@ -70,7 +70,7 @@ void WorkerThread::process(Message * msg) {
   RC rc __attribute__ ((unused));
 
   DEBUG("%ld Processing %ld %d\n",get_thd_id(),msg->get_txn_id(),msg->get_rtype());
-  assert(msg->get_rtype() == CL_QRY || msg->get_rtype() == CL_QRY_O || msg->get_txn_id() != UINT64_MAX);
+  assert(msg->rtype == CL_QRY || msg->rtype == SUB_CL_QRY || msg->get_rtype() == CL_QRY_O || msg->get_txn_id() != UINT64_MAX);
   uint64_t starttime = get_sys_clock();
 		switch(msg->get_rtype()) {
 			case RPASS:
@@ -106,6 +106,7 @@ void WorkerThread::process(Message * msg) {
       case CL_QRY:
       case CL_QRY_O:
 			case RTXN:
+      case SUB_CL_QRY:
 #if CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN
         rc = process_calvin_rtxn(msg);
 #else

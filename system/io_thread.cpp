@@ -54,7 +54,7 @@ void InputThread::setup() {
 					msgs->erase(msgs->begin());
 					continue;
 				}
-				if( msg->rtype == RDONE || msg->rtype == CL_QRY || msg->rtype == CL_QRY_O) {
+				if( msg->rtype == RDONE || msg->rtype == CL_QRY || msg->rtype == SUB_CL_QRY || msg->rtype == CL_QRY_O) {
 					assert(ISSERVERN(msg->get_return_id()));
 					work_queue.sched_enqueue(get_thd_id(),msg);
 					msgs->erase(msgs->begin());
@@ -176,7 +176,7 @@ RC InputThread::server_recv_loop() {
 				msgs->erase(msgs->begin());
 				continue;
 			}
-			if( msg->rtype == RDONE || msg->rtype == CL_QRY || msg->rtype == CL_QRY_O) {
+			if( msg->rtype == RDONE || msg->rtype == CL_QRY || msg->rtype == SUB_CL_QRY || msg->rtype == CL_QRY_O) {
 				assert(ISSERVERN(msg->get_return_id()));
 				work_queue.sched_enqueue(get_thd_id(),msg);
 				msgs->erase(msgs->begin());

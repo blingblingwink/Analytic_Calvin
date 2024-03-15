@@ -206,6 +206,8 @@
 #define VALIDATION_LOCK				"no-wait" // no-wait or waiting
 #define PRE_ABORT2					"true"
 #define ATOMIC_WORD					false
+// [ANALYTIC_CALVIN]
+#define QUERY_SPLIT true // long txn split
 /***********************************************/
 // Logging
 /***********************************************/

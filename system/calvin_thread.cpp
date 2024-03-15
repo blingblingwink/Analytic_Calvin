@@ -68,7 +68,7 @@ RC CalvinLockThread::run() {
 		}
 		
 		prof_starttime = get_sys_clock();
-		assert(msg->get_rtype() == CL_QRY || msg->get_rtype() == CL_QRY_O);
+		assert(msg->rtype == CL_QRY || msg->rtype == SUB_CL_QRY || msg->rtype == CL_QRY_O);
 		assert(msg->get_txn_id() != UINT64_MAX);
 
 		txn_man = txn_table.get_transaction_manager(get_thd_id(), msg->get_txn_id(), msg->get_batch_id());
@@ -81,6 +81,7 @@ RC CalvinLockThread::run() {
 		txn_man->txn_stats.lat_other_time_start = msg->lat_other_time;
 
 		msg->copy_to_txn(txn_man);
+		txn_man->msg = msg;
 		txn_man->register_thread(this);
 		assert(ISSERVERN(txn_man->return_id));
 		INC_STATS(get_thd_id(),sched_txn_table_time,get_sys_clock() - prof_starttime);
@@ -225,7 +226,21 @@ RC CalvinSequencerThread::run() {
 			case CL_QRY_O:
 				// Query from client
 				DEBUG("SEQ process_txn\n");
+#if CC_ALG == ANALYTIC_CALVIN
+	#if QUERY_SPLIT
+		#if WORKLOAD == YCSB
+				if (((YCSBClientQueryMessage*)msg)->requests.size() == g_short_req_per_query) {
+					seq_man.process_txn(msg, get_thd_id(), 0, 0, 0, 0);
+				} else {
+					seq_man.process_long_txn(msg, get_thd_id());
+				}
+		#endif
+	#else
+				seq_man.process_txn(msg, get_thd_id(), 0, 0, 0, 0);
+	#endif
+#else
 				seq_man.process_txn(msg,get_thd_id(),0,0,0,0);
+#endif
 				// Don't free message yet
 				break;
 			case CALVIN_ACK:

@@ -45,7 +45,7 @@ void MessageQueue::init() {
 
 void MessageQueue::statqueue(uint64_t thd_id, msg_entry * entry) {
   Message *msg = entry->msg;
-  if (msg->rtype == CL_QRY || msg->rtype == CL_QRY_O || msg->rtype == RTXN_CONT ||
+  if (msg->rtype == CL_QRY || msg->rtype == SUB_CL_QRY || msg->rtype == CL_QRY_O || msg->rtype == RTXN_CONT ||
       msg->rtype == RQRY_RSP || msg->rtype == RACK_PREP  ||
       msg->rtype == RACK_FIN || msg->rtype == RTXN) {
     // these msg will send back to local node
