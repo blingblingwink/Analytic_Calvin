@@ -225,23 +225,28 @@ Message * Message::create_message(RemReqType rtype) {
   return msg;
 }
 
-Message* Message::create_submessage(Message *original_msg, size_t start, size_t end, uint8_t *pNum) {
+Message* Message::init_submessage() {
   auto msg = create_message(SUB_CL_QRY);
-  msg->return_node_id = original_msg->return_node_id;
-  
-  auto msg_for_ease = static_cast<YCSBSubClientQueryMessage*>(msg);
+  // Array partitions is not used under Analytic_Calvin
+  static_cast<YCSBSubClientQueryMessage*>(msg)->requests.init(g_short_req_per_query);
+  return msg;
+}
+
+Message* Message::create_submessage(Message *original_msg, size_t start, size_t end, uint8_t *pNum) {  
+  auto submsg = init_submessage();
+
+  auto msg_for_ease = static_cast<YCSBSubClientQueryMessage*>(submsg);
   auto requests_for_ease = static_cast<YCSBClientQueryMessage*>(original_msg)->requests;
 
-  msg_for_ease->partitions.clear();
-  msg_for_ease->partitions.copy(((YCSBClientQueryMessage*)original_msg)->partitions);
-  msg_for_ease->requests.init(end - start);
+  // record information of the original msg
+  msg_for_ease->return_node_id = original_msg->return_node_id;
+
   for (size_t i = start; i < end; i++) {
     msg_for_ease->requests.add(requests_for_ease[i]);
   }
 
   msg_for_ease->piecesRemained = pNum;
-
-  return msg;
+  return submsg;
 }
 
 uint64_t Message::mget_size() {
