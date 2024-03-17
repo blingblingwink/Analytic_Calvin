@@ -667,9 +667,13 @@ void TxnManager::commit_stats() {
 		return;
 	}
 
+#if CC_ALG == ANALYTIC_CALVIN
 	if (msg->rtype != SUB_CL_QRY) {
 		INC_STATS(get_thd_id(), txn_cnt, 1);
 	}
+#else
+	INC_STATS(get_thd_id(), txn_cnt, 1);
+#endif
 	INC_STATS(get_thd_id(),local_txn_commit_cnt,1);
 	INC_STATS(get_thd_id(), txn_run_time, timespan_long);
 	if(query->partitions_touched.size() > 1) {

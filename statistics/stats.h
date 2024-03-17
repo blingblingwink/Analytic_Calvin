@@ -235,6 +235,7 @@ public:
   double twopl_release_time;
 
   // Calvin
+  double seq_split_time;
   uint64_t seq_txn_cnt;
   uint64_t seq_batch_cnt;
   uint64_t seq_full_batch_cnt;

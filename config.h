@@ -207,7 +207,7 @@
 #define PRE_ABORT2					"true"
 #define ATOMIC_WORD					false
 // [ANALYTIC_CALVIN]
-#define QUERY_SPLIT true // long txn split
+#define QUERY_SPLIT true
 /***********************************************/
 // Logging
 /***********************************************/

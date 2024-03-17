@@ -258,6 +258,7 @@ void Stats_thd::clear() {
   twopl_release_time=0;
 
   // Calvin
+  seq_split_time = 0;
   seq_txn_cnt=0;
   seq_batch_cnt=0;
   seq_full_batch_cnt=0;
@@ -959,6 +960,7 @@ void Stats_thd::print(FILE * outf, bool prog) {
   double sched_queue_wait_avg_time = 0;
   if (sched_queue_cnt > 0) sched_queue_wait_avg_time = sched_queue_wait_time / sched_queue_cnt;
   fprintf(outf,
+  ",seq_split_time=%f"
   ",seq_txn_cnt=%ld"
   ",seq_batch_cnt=%ld"
   ",seq_full_batch_cnt=%ld"
@@ -986,6 +988,7 @@ void Stats_thd::print(FILE * outf, bool prog) {
   ",sched_txn_table_time=%f"
   ",sched_epoch_cnt=%ld"
           ",sched_epoch_diff=%f",
+          seq_split_time / BILLION,
           seq_txn_cnt, seq_batch_cnt, seq_full_batch_cnt, seq_ack_time / BILLION,
           seq_batch_time / BILLION, seq_process_cnt, seq_complete_cnt, seq_process_time / BILLION,
           seq_prep_time / BILLION, seq_idle_time / BILLION, seq_queue_wait_time / BILLION,
@@ -1498,6 +1501,7 @@ void Stats_thd::combine(Stats_thd * stats) {
   twopl_getlock_time+=stats->twopl_getlock_time;
 
   // Calvin
+  seq_split_time += stats->seq_split_time;
   seq_txn_cnt+=stats->seq_txn_cnt;
   seq_batch_cnt+=stats->seq_batch_cnt;
   seq_full_batch_cnt+=stats->seq_full_batch_cnt;

@@ -59,6 +59,7 @@ private:
     ts_t        _curr_ts;
     ts_t        get_next_ts();
     TxnManager * txn_man;
+    uint64_t idle_start_time;
 #if CC_ALG == ANALYTIC_CALVIN
     bool handle_work_queue();
     bool handle_pending_queue();

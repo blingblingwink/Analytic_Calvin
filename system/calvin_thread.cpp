@@ -226,17 +226,13 @@ RC CalvinSequencerThread::run() {
 			case CL_QRY_O:
 				// Query from client
 				DEBUG("SEQ process_txn\n");
-#if CC_ALG == ANALYTIC_CALVIN
-	#if QUERY_SPLIT
-		#if WORKLOAD == YCSB
+#if CC_ALG == ANALYTIC_CALVIN && QUERY_SPLIT
+	#if WORKLOAD == YCSB
 				if (((YCSBClientQueryMessage*)msg)->requests.size() == g_short_req_per_query) {
 					seq_man.process_txn(msg, get_thd_id(), 0, 0, 0, 0);
 				} else {
 					seq_man.process_long_txn(msg, get_thd_id());
 				}
-		#endif
-	#else
-				seq_man.process_txn(msg, get_thd_id(), 0, 0, 0, 0);
 	#endif
 #else
 				seq_man.process_txn(msg,get_thd_id(),0,0,0,0);

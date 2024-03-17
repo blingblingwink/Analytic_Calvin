@@ -42,6 +42,7 @@
 #include "bocc.h"
 
 void WorkerThread::setup() {
+  idle_start_time = 0;
 	if( get_thd_id() == 0) {
     send_init_done_to_all_nodes();
   }
@@ -281,6 +282,12 @@ bool WorkerThread::handle_work_queue() {
   if (!msg) {
     return false;
   }
+
+  if (idle_start_time > 0) {
+    INC_STATS(_thd_id, worker_idle_time, get_sys_clock() - idle_start_time);
+    idle_start_time = 0;
+  }
+
   txn_man = get_transaction_manager(msg);
 
   // stats
@@ -319,6 +326,11 @@ bool WorkerThread::handle_pending_queue() {
   txn_man = work_queue.pending_dequeue(_thd_id);
   if (!txn_man) {
     return false;
+  }
+
+  if (idle_start_time > 0) {
+    INC_STATS(_thd_id, worker_idle_time, get_sys_clock() - idle_start_time);
+    idle_start_time = 0;
   }
 
   // stats
@@ -367,15 +379,20 @@ RC WorkerThread::run() {
   printf("Running WorkerThread %ld\n",_thd_id);
 
   while(!simulation->is_done()) {
+
+    bool is_idle = true;
     // handle remote txn first
     while (handle_work_queue()) {
+      is_idle = false;
     }
     
     while (handle_pending_queue()) {
+      is_idle = false;
     }
-    // handle_work_queue();
-    // handle_pending_queue();
-    // then handle locking
+
+    if (is_idle && idle_start_time == 0) {
+      idle_start_time = get_sys_clock();
+    }
   }
   printf("FINISH %ld:%ld\n",_node_id,_thd_id);
   fflush(stdout);

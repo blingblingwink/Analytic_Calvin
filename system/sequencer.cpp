@@ -32,7 +32,8 @@
 
 void Sequencer::init(Workload * wl) {
 	next_txn_id = 0;
-	max_range_per_epoch_per_node = g_inflight_max * g_node_cnt;
+	// given that long txn maybe splitted, so it is multiplied by an additional 10
+	max_range_per_epoch_per_node = g_inflight_max * g_node_cnt * 10;
 	max_range_per_epoch = max_range_per_epoch_per_node * g_node_cnt;
 	offset = max_range_per_epoch_per_node * g_node_id;
 	rsp_cnt = g_node_cnt + g_client_node_cnt;
@@ -150,6 +151,8 @@ void Sequencer::process_ack(Message * msg, uint64_t thd_id) {
 										(double)skew_timespan / BILLION,
 										(double)wait_list[id].total_batch_time / BILLION);
 
+		INC_STATS(thd_id,seq_complete_cnt,1);
+		
 		if (cl_msg->rtype == SUB_CL_QRY) {
 			auto piecesRemained = static_cast<YCSBSubClientQueryMessage*>(cl_msg)->piecesRemained;
 			(*piecesRemained)--;
@@ -170,8 +173,6 @@ void Sequencer::process_ack(Message * msg, uint64_t thd_id) {
 #if WORKLOAD == PPS
 		}
 #endif
-
-		INC_STATS(thd_id,seq_complete_cnt,1);
 
 	}
 
@@ -270,7 +271,7 @@ void Sequencer::process_txn(Message *msg, uint64_t thd_id, uint64_t early_start,
 		en->list[id].seq_first_startts = early_start;
 	}
 	assert(en->size == en->txns_left);
-	assert(en->size <= ((uint64_t)g_inflight_max * g_node_cnt));
+	assert(en->size <= max_range_per_epoch_per_node);
 
 	// Add new txn to fill queue
 	for(auto participant = participants.begin(); participant != participants.end(); participant++) {
@@ -349,7 +350,9 @@ void Sequencer::split_msg(Message *msg) {
 }
 
 void Sequencer::process_long_txn(Message *msg, uint64_t thd_id) {
+	auto start = get_sys_clock();
 	split_msg(msg);
+	INC_STATS(thd_id, seq_split_time, get_sys_clock() - start);
 	for (auto item: splitted_msgs) {
 		process_txn(item, thd_id, 0, 0, 0, 0);
 	}
