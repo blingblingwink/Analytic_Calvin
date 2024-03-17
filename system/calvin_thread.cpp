@@ -246,6 +246,7 @@ RC CalvinSequencerThread::run() {
 				seq_man.process_ack(msg,get_thd_id());
 				// Free message here
 				msg->release();
+				delete msg;
 				break;
 			default:
 				assert(false);

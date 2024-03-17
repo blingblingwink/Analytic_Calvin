@@ -153,30 +153,36 @@ void Sequencer::process_ack(Message * msg, uint64_t thd_id) {
 
 		INC_STATS(thd_id,seq_complete_cnt,1);
 		
+
+		bool isFinished = true;
 		if (cl_msg->rtype == SUB_CL_QRY) {
 			auto piecesRemained = static_cast<YCSBSubClientQueryMessage*>(cl_msg)->piecesRemained;
 			(*piecesRemained)--;
-			if (*piecesRemained > 0) {	// original txn is NOT finished yet
-				goto final;
+
+			if (*piecesRemained == 0) {	// original txn is finished
+				INC_STATS(thd_id, txn_cnt, 1);
+				delete piecesRemained;
+			} else {
+				isFinished = false;
 			}
-			
-			// original txn is finished
-			INC_STATS(thd_id, txn_cnt, 1);
-			free(piecesRemained);
 		}
 
+		// delete client msg
 		cl_msg->release();
+		delete cl_msg;
 
-		auto rsp_msg = (ClientResponseMessage *)Message::create_message(msg->get_txn_id(), CL_RSP);
-		rsp_msg->client_startts = wait_list[id].client_startts;
-		msg_queue.enqueue(thd_id,rsp_msg,wait_list[id].client_id);
+		if (isFinished) {
+			auto rsp_msg = (ClientResponseMessage *)Message::create_message(msg->get_txn_id(), CL_RSP);
+			rsp_msg->client_startts = wait_list[id].client_startts;
+			msg_queue.enqueue(thd_id,rsp_msg,wait_list[id].client_id);
+		}
+
 #if WORKLOAD == PPS
 		}
 #endif
 
 	}
 
-final:
 	// If we have all acks for this batch, send qry responses to all clients
 	if (en->txns_left == 0) {
 		DEBUG("FINISHED BATCH %ld\n",en->epoch);
@@ -340,13 +346,14 @@ void Sequencer::split_msg(Message *msg) {
 	auto pNum = new uint8_t{static_cast<uint8_t>(g_long_req_per_query / g_short_req_per_query)};
 	size_t start = 0;
 	while (start < g_long_req_per_query) {
-		auto submsg = Message::create_submessage(msg, start, start + g_short_req_per_query, pNum);
+		Message *submsg = Message::create_submessage(msg, start, start + g_short_req_per_query, pNum);
 		splitted_msgs.push_back(submsg);
 		start += g_short_req_per_query;
 	}
 
 	// release original msg
 	msg->release();
+	delete msg;
 }
 
 void Sequencer::process_long_txn(Message *msg, uint64_t thd_id) {
