@@ -50,6 +50,9 @@ void InputThread::setup() {
 #if CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN
 				if(msg->rtype == CALVIN_ACK ||(msg->rtype == CL_QRY && ISCLIENTN(msg->get_return_id())) ||
 					(msg->rtype == CL_QRY_O && ISCLIENTN(msg->get_return_id()))) {
+	#if CC_ALG == ANALYTIC_CALVIN && QUERY_SPLIT
+					long_txn_split(msg);
+	#endif
 					work_queue.sequencer_enqueue(get_thd_id(),msg);
 					msgs->erase(msgs->begin());
 					continue;
@@ -172,6 +175,9 @@ RC InputThread::server_recv_loop() {
 #if CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN
 			if(msg->rtype == CALVIN_ACK ||(msg->rtype == CL_QRY && ISCLIENTN(msg->get_return_id())) ||
 			(msg->rtype == CL_QRY_O && ISCLIENTN(msg->get_return_id()))) {
+	#if CC_ALG == ANALYTIC_CALVIN && QUERY_SPLIT
+				long_txn_split(msg);
+	#endif
 				work_queue.sequencer_enqueue(get_thd_id(),msg);
 				msgs->erase(msgs->begin());
 				continue;
@@ -193,6 +199,27 @@ RC InputThread::server_recv_loop() {
 	printf("FINISH %ld:%ld\n",_node_id,_thd_id);
 	fflush(stdout);
 	return FINISH;
+}
+
+void InputThread::long_txn_split(Message *msg) {
+	if (msg->rtype != CL_QRY || static_cast<YCSBClientQueryMessage*>(msg)->requests.size() < g_long_req_per_query) {
+		return;
+	}
+
+	auto start_time = get_sys_clock();
+
+	auto msg_for_ease = static_cast<YCSBClientQueryMessage*>(msg);
+	uint8_t Nsubmsg = g_long_req_per_query / g_short_req_per_query;	// number of sub msgs
+	msg_for_ease->pSubmsgs = new std::vector<Message*>();	// vector used for recording sub msgs
+	auto pNum = new uint8_t{Nsubmsg};
+
+	size_t start = 0;
+	while (start < g_long_req_per_query) {
+		Message *submsg = Message::create_submessage(msg, start, start + g_short_req_per_query, pNum);
+		msg_for_ease->pSubmsgs->push_back(submsg);
+		start += g_short_req_per_query;
+	}
+	INC_STATS(_thd_id, seq_split_time, get_sys_clock() - start_time);
 }
 
 void OutputThread::setup() {

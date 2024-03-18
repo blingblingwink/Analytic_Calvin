@@ -357,12 +357,19 @@ void Sequencer::split_msg(Message *msg) {
 }
 
 void Sequencer::process_long_txn(Message *msg, uint64_t thd_id) {
-	auto start = get_sys_clock();
-	split_msg(msg);
-	INC_STATS(thd_id, seq_split_time, get_sys_clock() - start);
-	for (auto item: splitted_msgs) {
+	auto pSubmsgs = static_cast<YCSBClientQueryMessage*>(msg)->pSubmsgs;
+	auto vecSubmsgs = *(pSubmsgs);
+	for (auto item: vecSubmsgs) {
 		process_txn(item, thd_id, 0, 0, 0, 0);
 	}
+
+	// free submsgs
+	vector<Message*>().swap(vecSubmsgs);
+	delete pSubmsgs;
+
+	// free original msg
+	msg->release();
+	delete msg;
 }
 
 void Sequencer::check_contention(Message *msg) {

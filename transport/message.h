@@ -291,6 +291,7 @@ public:
   void release();
 
   Array<ycsb_request*> requests;
+  std::vector<Message*> *pSubmsgs;
 
 };
 
