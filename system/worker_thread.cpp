@@ -129,13 +129,15 @@ void WorkerThread::process(Message * msg) {
 				assert(false);
 				break;
 		}
-  statqueue(get_thd_id(), msg, starttime);
+  // under Calvin or ANALYTIC_CALVIN, client msg is release and deleted in process_ack,
+  // so msg at here may not be usable
+  // statqueue(get_thd_id(), msg, starttime);
   uint64_t timespan = get_sys_clock() - starttime;
   INC_STATS(get_thd_id(),worker_process_cnt,1);
   INC_STATS(get_thd_id(),worker_process_time,timespan);
-  INC_STATS(get_thd_id(),worker_process_cnt_by_type[msg->rtype],1);
-  INC_STATS(get_thd_id(),worker_process_time_by_type[msg->rtype],timespan);
-  DEBUG("%ld EndProcessing %d %ld\n",get_thd_id(),msg->get_rtype(),msg->get_txn_id());
+  // INC_STATS(get_thd_id(),worker_process_cnt_by_type[msg->rtype],1);
+  // INC_STATS(get_thd_id(),worker_process_time_by_type[msg->rtype],timespan);
+  // DEBUG("%ld EndProcessing %d %ld\n",get_thd_id(),msg->get_rtype(),msg->get_txn_id());
 }
 
 void WorkerThread::check_if_done(RC rc) {
