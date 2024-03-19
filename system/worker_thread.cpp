@@ -40,6 +40,7 @@
 #include "ssi.h"
 #include "focc.h"
 #include "bocc.h"
+#include "conflict_stats.h"
 
 void WorkerThread::setup() {
   idle_start_time = 0;
@@ -1035,7 +1036,6 @@ RC WorkerNumThread::run() {
   tsetup();
   printf("Running WorkerNumThread %ld\n",_thd_id);
 
-  // uint64_t idle_starttime = 0;
   int i = 0;
 	while(!simulation->is_done()) {
     progress_stats();
@@ -1063,15 +1063,6 @@ RC WorkerNumThread::run() {
     INC_STATS(_thd_id,work_queue_dtx_cnt[i],dtx_size);
     i++;
     sleep(1);
-    // if(idle_starttime ==0)
-    //   idle_starttime = get_sys_clock();
-
-    // if(get_sys_clock() - idle_starttime > 1000000000) {
-    //   i++;
-    //   idle_starttime = 0;
-    // }
-    //uint64_t starttime = get_sys_clock();
-
 	}
   printf("FINISH %ld:%ld\n",_node_id,_thd_id);
   fflush(stdout);
@@ -1097,6 +1088,27 @@ RC PendingHandleThread::run() {
     work_queue.pending_validate(_thd_id);
 	}
   printf("FINISH %ld:%ld\n",_node_id,_thd_id);
+  fflush(stdout);
+  return FINISH;
+}
+
+void ConlictStatsHandleThread::setup() {
+}
+
+RC ConlictStatsHandleThread::run() {
+  tsetup();
+  printf("Running ConlictStatsHandleThread %ld\n",_thd_id);
+
+  uint16_t i = 0;
+	while(!simulation->is_done()) {
+    INC_STATS(_thd_id, row_conflict_highest_cnt[i], conflict_stats_man.get_highest_conflict());
+    INC_STATS(_thd_id, row_conflict_total_cnt[i], conflict_stats_man.get_total_conflict());
+    i++;
+
+    conflict_stats_man.update_conflict_state();
+    sleep(1);
+	}
+  printf("FINISH %ld:%ld\n", _node_id, _thd_id);
   fflush(stdout);
   return FINISH;
 }

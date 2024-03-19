@@ -996,6 +996,7 @@ uint64_t ClientQueryMessage::get_size() {
   /*
   uint64_t size = sizeof(ClientQueryMessage);
   */
+  size += sizeof(bool);
   size += sizeof(size_t);
   size += sizeof(uint64_t) * partitions.size();
   return size;
@@ -1028,6 +1029,7 @@ void ClientQueryMessage::copy_from_buf(char * buf) {
   uint64_t ptr = Message::mget_size();
   //COPY_VAL(ts,buf,ptr);
   COPY_VAL(client_startts,buf,ptr);
+  COPY_VAL(is_high_contended, buf, ptr);
   size_t size;
   COPY_VAL(size,buf,ptr);
   partitions.init(size);
@@ -1044,6 +1046,7 @@ void ClientQueryMessage::copy_to_buf(char * buf) {
   uint64_t ptr = Message::mget_size();
   //COPY_BUF(buf,ts,ptr);
   COPY_BUF(buf,client_startts,ptr);
+  COPY_BUF(buf, is_high_contended, ptr);
   size_t size = partitions.size();
   COPY_BUF(buf,size,ptr);
   for(uint64_t i = 0; i < size; i++) {

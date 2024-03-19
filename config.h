@@ -207,7 +207,10 @@
 #define PRE_ABORT2					"true"
 #define ATOMIC_WORD					false
 // [ANALYTIC_CALVIN]
-#define QUERY_SPLIT true
+#define CONTENTION_CHECK false
+#define CONFLICT_PARTITION_SIZE 10000
+#define LOWER_BOUND 5000
+#define UPPER_BOUND 8000
 /***********************************************/
 // Logging
 /***********************************************/

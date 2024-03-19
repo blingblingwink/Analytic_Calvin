@@ -371,7 +371,3 @@ void Sequencer::process_long_txn(Message *msg, uint64_t thd_id) {
 	msg->release();
 	delete msg;
 }
-
-void Sequencer::check_contention(Message *msg) {
-
-}

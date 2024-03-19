@@ -234,8 +234,11 @@ public:
   double twopl_getlock_time;
   double twopl_release_time;
 
+  // Analytic_Calvin
+  double split_time;
+  uint64_t * row_conflict_total_cnt;
+  uint64_t * row_conflict_highest_cnt;
   // Calvin
-  double seq_split_time;
   uint64_t seq_txn_cnt;
   uint64_t seq_batch_cnt;
   uint64_t seq_full_batch_cnt;

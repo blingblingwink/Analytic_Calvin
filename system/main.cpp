@@ -53,6 +53,7 @@
 #include "tictoc.h"
 #include "key_xid.h"
 #include "rts_cache.h"
+#include "conflict_stats.h"
 
 void network_test();
 void network_test_recv();
@@ -70,6 +71,7 @@ CalvinSequencerThread * calvin_seq_thds;
 #elif CC_ALG == ANALYTIC_CALVIN
 CalvinLockThread * calvin_lock_thds;
 PendingHandleThread * pending_handle_thds;
+ConlictStatsHandleThread * conflict_stats_handle_thds;
 CalvinSequencerThread * calvin_seq_thds;
 #endif
 
@@ -193,6 +195,12 @@ int main(int argc, char *argv[]) {
 	seq_man.init(m_wl);
 	printf("Done\n");
 #endif
+#if CC_ALG == ANALYTIC_CALVIN && CONTENTION_CHECK
+	printf("Initializing conflict_stats_man... ");
+	fflush(stdout);
+	conflict_stats_man.init();
+	printf("Done\n");
+#endif
 #if CC_ALG == MAAT
 	printf("Initializing Time Table... ");
 	fflush(stdout);
@@ -285,6 +293,9 @@ int main(int argc, char *argv[]) {
 	all_thd_cnt += 2; // sequencer + scheduler thread
 #elif CC_ALG == ANALYTIC_CALVIN
 	all_thd_cnt += 2 + g_scheduler_thread_cnt;	// sequencer + pending handle thread + schedulers
+#if CONTENTION_CHECK
+	all_thd_cnt += 1;	// ConlictStatsHandleThread
+#endif
 #endif
 
 
@@ -309,6 +320,7 @@ int main(int argc, char *argv[]) {
 #elif CC_ALG == ANALYTIC_CALVIN
 	calvin_lock_thds = new CalvinLockThread[g_scheduler_thread_cnt];
 	pending_handle_thds = new PendingHandleThread[1];
+	conflict_stats_handle_thds = new ConlictStatsHandleThread[1];
 	calvin_seq_thds = new CalvinSequencerThread[1];
 #endif
 	// query_queue should be the last one to be initialized!!!
@@ -446,6 +458,11 @@ int main(int argc, char *argv[]) {
 
 	calvin_seq_thds[0].init(id,g_node_id,m_wl);
 	pthread_create(&p_thds[id++], &attr, run_thread, (void *)&calvin_seq_thds[0]);
+#endif
+
+#if CC_ALG == ANALYTIC_CALVIN && CONTENTION_CHECK
+	conflict_stats_handle_thds[0].init(id, g_node_id, m_wl);
+	pthread_create(&p_thds[id++], &attr, run_thread, (void *)&conflict_stats_handle_thds[0]);
 #endif
 
 	worker_num_thds[0].init(id,g_node_id,m_wl);

@@ -54,6 +54,7 @@
 #include "tictoc.h"
 #include "key_xid.h"
 #include "rts_cache.h"
+#include "conflict_stats.h"
 
 #include <boost/lockfree/queue.hpp>
 #include "da_block_queue.h"
@@ -110,6 +111,7 @@ then txn 1 is wrongly regarded as smallest txn_id
 */
 std::array<std::atomic<uint64_t>, SCHEDULER_THREAD_CNT> watermarks;
 std::atomic<uint64_t> min_watermark;
+Conflict_Stats conflict_stats_man;
 #endif
 boost::lockfree::queue<DAQuery*, boost::lockfree::fixed_sized<true>> da_query_queue{100};
 DABlockQueue da_gen_qry_queue(50);
@@ -181,11 +183,11 @@ UInt32 g_scheduler_thread_cnt = SCHEDULER_THREAD_CNT;
 // and then, in main.cpp, an assert between all_thd_cnt and g_total_thread_cnt will be made
 #if CC_ALG == CALVIN
 // sequencer + scheduler thread
-UInt32 g_total_thread_cnt = g_thread_cnt + g_rem_thread_cnt + g_send_thread_cnt + g_abort_thread_cnt + g_logger_thread_cnt + 3;
+UInt32 g_total_thread_cnt = g_thread_cnt + g_rem_thread_cnt + g_send_thread_cnt + g_abort_thread_cnt + g_logger_thread_cnt + 3; // sequencer + scheduler + WorkerNumThread
 #elif CC_ALG == ANALYTIC_CALVIN
-UInt32 g_total_thread_cnt = g_thread_cnt + g_rem_thread_cnt + g_send_thread_cnt + g_abort_thread_cnt + g_logger_thread_cnt + g_scheduler_thread_cnt + 3;
+UInt32 g_total_thread_cnt = g_thread_cnt + g_rem_thread_cnt + g_send_thread_cnt + g_abort_thread_cnt + g_logger_thread_cnt + g_scheduler_thread_cnt + 4; // sequencer + PendingHandleThread + ConlictStatsHandleThread + WorkerNumThread
 #else
-UInt32 g_total_thread_cnt = g_thread_cnt + g_rem_thread_cnt + g_send_thread_cnt + g_abort_thread_cnt + g_logger_thread_cnt + 1;
+UInt32 g_total_thread_cnt = g_thread_cnt + g_rem_thread_cnt + g_send_thread_cnt + g_abort_thread_cnt + g_logger_thread_cnt + 1; // 1 indicates WorkerNumThread
 #endif
 
 UInt32 g_total_client_thread_cnt = g_client_thread_cnt + g_client_rem_thread_cnt + g_client_send_thread_cnt;

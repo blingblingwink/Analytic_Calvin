@@ -52,6 +52,9 @@ void Stats_thd::init(uint64_t thd_id) {
   DEBUG_M("Stats_thd::init work_queue_dtx_cnt alloc\n");
   work_queue_dtx_cnt= (uint64_t *) mem_allocator.align_alloc(sizeof(uint64_t) * SECOND);
 
+  row_conflict_total_cnt = (uint64_t *) mem_allocator.align_alloc(sizeof(uint64_t) * SECOND);
+  row_conflict_highest_cnt = (uint64_t *) mem_allocator.align_alloc(sizeof(uint64_t) * SECOND);
+
   DEBUG_M("Stats_thd::init mtx alloc\n");
   mtx= (double *) mem_allocator.align_alloc(sizeof(double) * 40);
 
@@ -217,6 +220,8 @@ void Stats_thd::clear() {
     work_queue_dwq_cnt[i]=0;
     work_queue_etx_cnt[i]=0;
     work_queue_dtx_cnt[i]=0;
+    row_conflict_total_cnt[i] = 0;
+    row_conflict_highest_cnt[i] = 0;
   }
   // IO
   msg_queue_delay_time=0;
@@ -257,8 +262,9 @@ void Stats_thd::clear() {
   twopl_release_cnt=0;
   twopl_release_time=0;
 
+  // Analytic_Calvin
+  split_time = 0;
   // Calvin
-  seq_split_time = 0;
   seq_txn_cnt=0;
   seq_batch_cnt=0;
   seq_full_batch_cnt=0;
@@ -831,37 +837,13 @@ void Stats_thd::print(FILE * outf, bool prog) {
             i, worker_process_cnt_by_type[i], i, worker_process_time_by_type[i] / BILLION);
   }
 
+
   for(uint64_t i = 0; i < SECOND; i ++) {
-    fprintf(outf,
-      ",work_queue_wq_cnt%lu=%lu"
-      ",work_queue_tx_cnt%lu=%lu"
-      ,i
-      ,work_queue_wq_cnt[i]
-      ,i
-      ,work_queue_tx_cnt[i]
-    );
+    fprintf(outf, ",row_conflict_total_cnt%lu=%lu", i, row_conflict_total_cnt[i]);
   }
 
   for(uint64_t i = 0; i < SECOND; i ++) {
-    fprintf(outf,
-      ",work_queue_ewq_cnt%lu=%lu"
-      ",work_queue_dwq_cnt%lu=%lu"
-      ,i
-      ,work_queue_ewq_cnt[i]
-      ,i
-      ,work_queue_dwq_cnt[i]
-    );
-  }
-
-  for(uint64_t i = 0; i < SECOND; i ++) {
-    fprintf(outf,
-      ",work_queue_etx_cnt%lu=%lu"
-      ",work_queue_dtx_cnt%lu=%lu"
-      ,i
-      ,work_queue_etx_cnt[i]
-      ,i
-      ,work_queue_dtx_cnt[i]
-    );
+    fprintf(outf, ",row_conflict_highest_cnt%lu=%lu", i, row_conflict_highest_cnt[i]);
   }
 
   // IO
@@ -960,7 +942,7 @@ void Stats_thd::print(FILE * outf, bool prog) {
   double sched_queue_wait_avg_time = 0;
   if (sched_queue_cnt > 0) sched_queue_wait_avg_time = sched_queue_wait_time / sched_queue_cnt;
   fprintf(outf,
-  ",seq_split_time=%f"
+  ",split_time=%f"
   ",seq_txn_cnt=%ld"
   ",seq_batch_cnt=%ld"
   ",seq_full_batch_cnt=%ld"
@@ -988,7 +970,7 @@ void Stats_thd::print(FILE * outf, bool prog) {
   ",sched_txn_table_time=%f"
   ",sched_epoch_cnt=%ld"
           ",sched_epoch_diff=%f",
-          seq_split_time / BILLION,
+          split_time / BILLION,
           seq_txn_cnt, seq_batch_cnt, seq_full_batch_cnt, seq_ack_time / BILLION,
           seq_batch_time / BILLION, seq_process_cnt, seq_complete_cnt, seq_process_time / BILLION,
           seq_prep_time / BILLION, seq_idle_time / BILLION, seq_queue_wait_time / BILLION,
@@ -1460,6 +1442,8 @@ void Stats_thd::combine(Stats_thd * stats) {
     work_queue_dwq_cnt[i]+=stats->work_queue_dwq_cnt[i];
     work_queue_etx_cnt[i]+=stats->work_queue_etx_cnt[i];
     work_queue_dtx_cnt[i]+=stats->work_queue_dtx_cnt[i];
+    row_conflict_total_cnt[i] += stats->row_conflict_total_cnt[i];
+    row_conflict_highest_cnt[i] += stats->row_conflict_highest_cnt[i];
   }
   // IO
   msg_queue_delay_time+=stats->msg_queue_delay_time;
@@ -1500,8 +1484,9 @@ void Stats_thd::combine(Stats_thd * stats) {
   twopl_release_time+=stats->twopl_release_time;
   twopl_getlock_time+=stats->twopl_getlock_time;
 
+  // Analytic_Calvin
+  split_time += stats->split_time;
   // Calvin
-  seq_split_time += stats->seq_split_time;
   seq_txn_cnt+=stats->seq_txn_cnt;
   seq_batch_cnt+=stats->seq_batch_cnt;
   seq_full_batch_cnt+=stats->seq_full_batch_cnt;

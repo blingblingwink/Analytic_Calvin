@@ -60,7 +60,6 @@ class Sequencer {
 #if WORKLOAD == YCSB
 	void split_msg(Message *msg);
 	void process_long_txn(Message *msg, uint64_t thd_id);
-	void check_contention(Message *msg);
 #endif
 
  private:

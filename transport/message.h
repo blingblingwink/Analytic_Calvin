@@ -275,6 +275,7 @@ public:
   uint64_t txn_id;
 #endif
   uint64_t client_startts;
+  bool is_high_contended;
   uint64_t first_startts;
   Array<uint64_t> partitions;
 };

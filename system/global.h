@@ -94,6 +94,7 @@ class DABlockQueue;
 class DtaTimeTable;
 class KeyXidCache;
 class RtsCache;
+class Conflict_Stats;
 // class QTcpQueue;
 
 typedef uint32_t UInt32;
@@ -270,6 +271,7 @@ extern double g_perc_updatepart;
 #if CC_ALG == ANALYTIC_CALVIN
 extern std::array<std::atomic<uint64_t>, SCHEDULER_THREAD_CNT> watermarks;
 extern std::atomic<uint64_t> min_watermark;
+extern Conflict_Stats conflict_stats_man;
 #endif
 extern boost::lockfree::queue<DAQuery*, boost::lockfree::fixed_sized<true>> da_query_queue;
 extern DABlockQueue da_gen_qry_queue;

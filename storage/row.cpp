@@ -41,6 +41,7 @@
 #include "row_acalvin.h"
 #include "mem_alloc.h"
 #include "manager.h"
+#include "conflict_stats.h"
 
 #define SIM_FULL_ROW true
 
@@ -210,6 +211,11 @@ RC row_t::get_lock(access_t type, TxnManager * txn) {
 	RC rc = RCOK;
 #if CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN
 	lock_t lt = (type == RD || type == SCAN)? LOCK_SH : LOCK_EX;
+#if CC_ALG == ANALYTIC_CALVIN && CONTENTION_CHECK
+	if (lt == LOCK_EX) {
+		conflict_stats_man.update_conflict_value(this);
+	}
+#endif
 	rc = this->manager->lock_get(lt, txn);
 #endif
 	return rc;
