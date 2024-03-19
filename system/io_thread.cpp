@@ -219,7 +219,7 @@ void InputThread::long_txn_split(Message *msg) {
 		msg_for_ease->pSubmsgs->push_back(submsg);
 		start += g_short_req_per_query;
 	}
-	INC_STATS(_thd_id, seq_split_time, get_sys_clock() - start_time);
+	INC_STATS(_thd_id, split_time, get_sys_clock() - start_time);
 }
 
 void OutputThread::setup() {
