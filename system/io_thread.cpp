@@ -154,6 +154,7 @@ RC InputThread::server_recv_loop() {
 	RC rc = RCOK;
 	assert (rc == RCOK);
 	uint64_t starttime;
+	uint64_t idle_starttime = 0;
 
 	std::vector<Message*> * msgs;
 	while (!simulation->is_done()) {
@@ -165,7 +166,14 @@ RC InputThread::server_recv_loop() {
 		INC_STATS(_thd_id,mtx[28], get_sys_clock() - starttime);
 		starttime = get_sys_clock();
 
-		if (msgs == NULL) continue;
+		if (msgs == NULL) {
+			if (idle_starttime == 0) idle_starttime = get_sys_clock();
+			continue;
+		}
+		if(idle_starttime > 0) {
+			INC_STATS(_thd_id, input_idle_time, get_sys_clock() - idle_starttime);
+			idle_starttime = 0;
+		}
 		while(!msgs->empty()) {
 			Message * msg = msgs->front();
 			if(msg->rtype == INIT_DONE) {
