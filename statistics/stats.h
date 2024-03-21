@@ -195,6 +195,7 @@ public:
   uint64_t * work_queue_etx_cnt;
   uint64_t * work_queue_dtx_cnt;
   // IO
+  double input_idle_time;
   double msg_queue_delay_time;
   uint64_t msg_queue_cnt;
   uint64_t msg_queue_enq_cnt;

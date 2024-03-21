@@ -267,6 +267,7 @@ void Stats_thd::clear() {
   Ncontended = 0;
   Nuncontended = 0;
   // Calvin
+  input_idle_time = 0;
   seq_txn_cnt=0;
   seq_batch_cnt=0;
   seq_full_batch_cnt=0;
@@ -947,6 +948,7 @@ void Stats_thd::print(FILE * outf, bool prog) {
   ",split_time=%f"
   ",Ncontented=%ld"
   ",Nuncontended=%ld"
+  ",input_idle_time=%f"
   ",seq_txn_cnt=%ld"
   ",seq_batch_cnt=%ld"
   ",seq_full_batch_cnt=%ld"
@@ -976,6 +978,7 @@ void Stats_thd::print(FILE * outf, bool prog) {
           ",sched_epoch_diff=%f",
           split_time / BILLION,
           Ncontended, Nuncontended,
+          input_idle_time / BILLION,
           seq_txn_cnt, seq_batch_cnt, seq_full_batch_cnt, seq_ack_time / BILLION,
           seq_batch_time / BILLION, seq_process_cnt, seq_complete_cnt, seq_process_time / BILLION,
           seq_prep_time / BILLION, seq_idle_time / BILLION, seq_queue_wait_time / BILLION,
@@ -1494,6 +1497,7 @@ void Stats_thd::combine(Stats_thd * stats) {
   Ncontended += stats->Ncontended;
   Nuncontended += stats->Nuncontended;
   // Calvin
+  input_idle_time += stats->input_idle_time;
   seq_txn_cnt+=stats->seq_txn_cnt;
   seq_batch_cnt+=stats->seq_batch_cnt;
   seq_full_batch_cnt+=stats->seq_full_batch_cnt;
