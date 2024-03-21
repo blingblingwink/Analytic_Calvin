@@ -341,21 +341,6 @@ void Sequencer::send_next_batch(uint64_t thd_id) {
 	offset += max_range_per_epoch;
 }
 
-void Sequencer::split_msg(Message *msg) {
-	splitted_msgs.clear();
-	auto pNum = new uint8_t{static_cast<uint8_t>(g_long_req_per_query / g_short_req_per_query)};
-	size_t start = 0;
-	while (start < g_long_req_per_query) {
-		Message *submsg = Message::create_submessage(msg, start, start + g_short_req_per_query, pNum);
-		splitted_msgs.push_back(submsg);
-		start += g_short_req_per_query;
-	}
-
-	// release original msg
-	msg->release();
-	delete msg;
-}
-
 void Sequencer::process_long_txn(Message *msg, uint64_t thd_id) {
 	auto pSubmsgs = static_cast<YCSBClientQueryMessage*>(msg)->pSubmsgs;
 	auto vecSubmsgs = *(pSubmsgs);
