@@ -4,8 +4,8 @@
 
 void Conflict_Stats::init() {
     for (size_t i = 0; i < Npartition; i++) {
-        pStats[i].store(0, memory_order_relaxed);
-        is_high_conflict[i].store(false, memory_order_relaxed);
+        pStats[i] = 0;
+        is_high_conflict[i] = false;
     }
 }
 
@@ -35,25 +35,25 @@ void Conflict_Stats::update_conflict_state() {
     for (size_t i = 0; ;i++) {
         // only iterate local partition
         uint64_t part = i * g_node_cnt + g_node_id;
-        if (part > Npartition) {
+        if (part >= Npartition) {
             break;
         }
 
         // update state
-        if (pStats[part] < conflict_lower_bound && is_high_conflict[part].load(memory_order_relaxed) == true) {
-            is_high_conflict[part].store(false, memory_order_relaxed);
-        } else if (pStats[part] > conflict_upper_bound && is_high_conflict[part].load(memory_order_relaxed) == false) {
-            is_high_conflict[part].store(true, memory_order_relaxed);
+        if (pStats[part] < conflict_lower_bound && is_high_conflict[part] == true) {
+            is_high_conflict[part] = false;
+        } else if (pStats[part] > conflict_upper_bound && is_high_conflict[part] == false) {
+            is_high_conflict[part] = true;
         }
 
         // reset to zero
-        pStats[part].store(0, memory_order_relaxed);
-    }
+        pStats[part] = 0;
+    }    
 }
 
 uint64_t Conflict_Stats::key_to_partition(uint64_t key) {
 #if NODE_CNT == 1
-    return key % g_node_cnt;
+    return key / conflict_partition_size;
 #else
     static constexpr uint64_t denom = NODE_CNT * conflict_partition_size;
     int node_num = key % g_node_cnt;
