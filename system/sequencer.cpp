@@ -31,7 +31,7 @@
 #include "stats.h"
 
 void Sequencer::init(Workload * wl) {
-	next_txn_id = 0;
+	next_txn_id = 1;
 	// given that long txn maybe splitted, so it is multiplied by an additional 10
 	max_range_per_epoch_per_node = g_inflight_max * g_node_cnt * 10;
 	max_range_per_epoch = max_range_per_epoch_per_node * g_node_cnt;

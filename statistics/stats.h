@@ -238,6 +238,8 @@ public:
   double split_time;
   uint64_t * row_conflict_total_cnt;
   uint64_t * row_conflict_highest_cnt;
+  uint64_t Ncontended;
+  uint64_t Nuncontended;
   // Calvin
   uint64_t seq_txn_cnt;
   uint64_t seq_batch_cnt;

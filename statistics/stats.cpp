@@ -264,6 +264,8 @@ void Stats_thd::clear() {
 
   // Analytic_Calvin
   split_time = 0;
+  Ncontended = 0;
+  Nuncontended = 0;
   // Calvin
   seq_txn_cnt=0;
   seq_batch_cnt=0;
@@ -943,6 +945,8 @@ void Stats_thd::print(FILE * outf, bool prog) {
   if (sched_queue_cnt > 0) sched_queue_wait_avg_time = sched_queue_wait_time / sched_queue_cnt;
   fprintf(outf,
   ",split_time=%f"
+  ",Ncontented=%ld"
+  ",Nuncontended=%ld"
   ",seq_txn_cnt=%ld"
   ",seq_batch_cnt=%ld"
   ",seq_full_batch_cnt=%ld"
@@ -971,6 +975,7 @@ void Stats_thd::print(FILE * outf, bool prog) {
   ",sched_epoch_cnt=%ld"
           ",sched_epoch_diff=%f",
           split_time / BILLION,
+          Ncontended, Nuncontended,
           seq_txn_cnt, seq_batch_cnt, seq_full_batch_cnt, seq_ack_time / BILLION,
           seq_batch_time / BILLION, seq_process_cnt, seq_complete_cnt, seq_process_time / BILLION,
           seq_prep_time / BILLION, seq_idle_time / BILLION, seq_queue_wait_time / BILLION,
@@ -1486,6 +1491,8 @@ void Stats_thd::combine(Stats_thd * stats) {
 
   // Analytic_Calvin
   split_time += stats->split_time;
+  Ncontended += stats->Ncontended;
+  Nuncontended += stats->Nuncontended;
   // Calvin
   seq_txn_cnt+=stats->seq_txn_cnt;
   seq_batch_cnt+=stats->seq_batch_cnt;

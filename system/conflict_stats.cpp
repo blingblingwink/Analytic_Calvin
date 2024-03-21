@@ -24,6 +24,11 @@ void Conflict_Stats::mark_contention(Message *msg) {
             }
         }
     }
+    if (msg_for_ease->is_high_contended) {
+        INC_STATS(0, Ncontended, 1);
+    } else {
+        INC_STATS(0, Nuncontended, 1);
+    }
 }
 
 void Conflict_Stats::update_conflict_value(row_t * row) {
