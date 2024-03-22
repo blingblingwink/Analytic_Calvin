@@ -210,6 +210,7 @@
 #define CONTENTION_CHECK false
 #define CONFLICT_PARTITION_SIZE 10000
 #define CONTENTION_CHECK_PERC 0.7
+#define FETCH_FAIL_MOD 10
 /***********************************************/
 // Logging
 /***********************************************/

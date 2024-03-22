@@ -18,8 +18,10 @@
 #define _CALVINTHREAD_H_
 
 #include "global.h"
+#include "message.h"
 
 class Workload;
+enum FetchType{EMPTY_MSG, RDONE_MSG, QRY_MSG};
 
 /*
 class CalvinThread : public Thread {
@@ -37,12 +39,16 @@ public:
     RC run();
     void setup();
 #if CC_ALG == ANALYTIC_CALVIN
+    FetchType fetch_msg_to_lock(Message *&msg);
+    bool double_check(Message *&msg);
     void init(uint64_t thd_id, uint64_t node_id, Workload * workload, uint64_t id);
 #endif
 private:
     TxnManager * m_txn;
 #if CC_ALG == ANALYTIC_CALVIN
     uint64_t id;
+    uint64_t failed_cnt;
+    static constexpr uint64_t failed_mod{FETCH_FAIL_MOD};
 #endif
 };
 

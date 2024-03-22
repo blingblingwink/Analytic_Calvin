@@ -42,17 +42,89 @@ void CalvinLockThread::init(uint64_t thd_id, uint64_t node_id, Workload * worklo
 	Thread::init(thd_id, node_id, workload);
 }
 
+FetchType CalvinLockThread::fetch_msg_to_lock(Message *&msg) {
+#if CONTENTION_CHECK
+	if (id == 0) {	// contended msg is handled by locker 0 dedicatedly
+		msg = work_queue.contended_dequeue(_thd_id);
+	} else {
+		msg = work_queue.sched_dequeue(_thd_id);
+	}
+#else
+	msg = work_queue.sched_dequeue(_thd_id);
+#endif
+	if (!msg) {
+		return EMPTY_MSG;
+	} else if (msg->rtype == RDONE) {
+		msg->release();
+		delete msg;
+		msg = NULL;
+		return RDONE_MSG;
+	} else {
+		return QRY_MSG;
+	}
+}
+
+bool CalvinLockThread::double_check(Message *&msg) {
+	failed_cnt++;
+	if (failed_cnt % failed_mod != 0 || watermarks[id] != min_watermark) {
+		return false;
+	}
+	// failed enough times to FORCE update its watermark and this locker is lagged behind
+
+	// find current max watermark
+	uint64_t cur_max_val = 0;
+	for (uint32_t i = 0; i < g_scheduler_thread_cnt; i++) {
+		cur_max_val = std::max(cur_max_val, watermarks[i].load(memory_order_acquire));
+	}
+
+	if (watermarks[id].load(memory_order_relaxed) == cur_max_val) {
+		// this may happen when a batch of txns are all processed and no txns available for now
+		return false;
+	}
+
+	/*
+		check again if it can fetch msg now, 
+		double check aims to avoid a rare concurrent problem, which is, say, we have 2 locker threads
+		and a batch of txns: T1, T2, T3, T4. And T1 belongs to contended_queue, T2, T3, T4 belong to sched_queue
+		locker 0 try to fetch msg, but T1 is not yet pushed into contended_queue, so locker 0 failed
+		and then T1 is pushed into contended_queue while T2, T3, T4 being pushed into sched_queue
+		then locker 1 successfully fetch T2, set its watermark to 2
+		Aparrently, it would be a mistake for locker 0 to FORCE update its watermark to 2 since T1 is not processed yet
+		A simple solution is to call fetch_msg_to_lock again, 
+		if msg successfully fetched, then just process its locking process
+		else, it means that there is INDEED no txns available for now, do FORCE update watermark as cur_max_val
+	*/
+	auto res = fetch_msg_to_lock(msg);
+	if (res == EMPTY_MSG) {
+		assert(watermarks[id] == min_watermark);
+		watermarks[id].store(cur_max_val, memory_order_release);
+		return false;
+	} else if (res == RDONE_MSG) {
+		return false;
+	} else {
+		return true;	// pass double check, fetch query successfully
+	}
+}
+
 RC CalvinLockThread::run() {
 	tsetup();
 
 	TxnManager * txn_man;
 	uint64_t prof_starttime = get_sys_clock();
 	uint64_t idle_starttime = 0;
+	failed_cnt = 0;
 
 	while(!simulation->is_done()) {
-		Message * msg = work_queue.sched_dequeue(_thd_id);
-		if(!msg) {
+		// Message * msg = work_queue.sched_dequeue(_thd_id);
+		Message * msg = NULL;
+		auto res = fetch_msg_to_lock(msg);
+		if (res == EMPTY_MSG) {
 			if (idle_starttime == 0) idle_starttime = get_sys_clock();
+			if (!double_check(msg)) {
+				// no txns available
+				continue;
+			}
+		} else if (res == RDONE_MSG) {
 			continue;
 		}
 
