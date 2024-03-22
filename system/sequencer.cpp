@@ -31,11 +31,11 @@
 #include "stats.h"
 
 void Sequencer::init(Workload * wl) {
-	next_txn_id = 1;
+	next_txn_id = 0;
 	// given that long txn maybe splitted, so it is multiplied by an additional 10
 	max_range_per_epoch_per_node = g_inflight_max * g_node_cnt * 10;
 	max_range_per_epoch = max_range_per_epoch_per_node * g_node_cnt;
-	offset = max_range_per_epoch_per_node * g_node_id;
+	offset = max_range_per_epoch_per_node * g_node_id + max_range_per_epoch;
 	rsp_cnt = g_node_cnt + g_client_node_cnt;
 	_wl = wl;
 	last_time_batch = 0;
@@ -55,7 +55,7 @@ void Sequencer::process_ack(Message * msg, uint64_t thd_id) {
 	assert(wait_list != NULL);
 	assert(en->txns_left > 0);
 
-	uint64_t id = msg->get_txn_id() - max_range_per_epoch_per_node * g_node_id - (en->epoch - 1) * max_range_per_epoch;
+	uint64_t id = msg->get_txn_id() - max_range_per_epoch_per_node * g_node_id - en->epoch * max_range_per_epoch;
 	uint64_t prof_stat = get_sys_clock();
 	assert(wait_list[id].server_ack_cnt > 0);
 
