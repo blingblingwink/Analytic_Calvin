@@ -306,8 +306,17 @@ void Sequencer::send_next_batch(uint64_t thd_id) {
 	for(uint64_t j = 0; j < g_node_cnt; j++) {
 		if (j == g_node_id) {
 			while (!fill_queue[j].empty()) {
-				work_queue.sched_enqueue(thd_id, fill_queue[j].front());
+				msg = fill_queue[j].front();
 				fill_queue[j].pop();
+#if CC_ALG == ANALYTIC_CALVIN && CONTENTION_CHECK
+				if (static_cast<ClientQueryMessage*>(msg)->is_high_contended) {
+					work_queue.contended_enqueue(thd_id, msg);
+				} else {
+					work_queue.sched_enqueue(thd_id, msg);
+				}
+#else
+				work_queue.sched_enqueue(thd_id, msg);
+#endif
 			}
 		} else {
 			while (!fill_queue[j].empty()) {
@@ -321,7 +330,14 @@ void Sequencer::send_next_batch(uint64_t thd_id) {
 		msg = Message::create_message(RDONE);
 		msg->batch_id = simulation->get_seq_epoch();
 		if(j == g_node_id) {
+#if CC_ALG == ANALYTIC_CALVIN && CONTENTION_CHECK
+			work_queue.sched_enqueue(thd_id, msg);
+			// duplicate RDONE is needed to ensure contended_queue progresses smoothly
+			msg = Message::create_message(RDONE);
+			work_queue.contended_enqueue(thd_id, msg);
+#else
 			work_queue.sched_enqueue(thd_id,msg);
+#endif
 		} else {
 			msg_queue.enqueue(thd_id,msg,j);
 		}

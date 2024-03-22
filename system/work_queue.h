@@ -71,6 +71,8 @@ public:
   Message * queuetop(uint64_t thd_id);
   void sched_enqueue(uint64_t thd_id, Message * msg);
   Message * sched_dequeue(uint64_t thd_id);
+  void contended_enqueue(uint64_t thd_id, Message *msg);
+  Message * contended_dequeue(uint64_t thd_id);
   void sequencer_enqueue(uint64_t thd_id, Message * msg);
   Message * sequencer_dequeue(uint64_t thd_id);
 #if CC_ALG == ANALYTIC_CALVIN
@@ -106,6 +108,7 @@ private:
   boost::lockfree::queue<work_queue_entry* > * new_txn_queue; // CL_QRY
   boost::lockfree::queue<work_queue_entry* > * seq_queue;
   boost::lockfree::queue<work_queue_entry* > ** sched_queue;
+  boost::lockfree::queue<Message* > ** contended_queue; // contended msg is handled by locker 0 dedicatedly
   
 #if CC_ALG == ANALYTIC_CALVIN
   struct VTxn {
@@ -121,6 +124,7 @@ private:
 #endif
 
   uint64_t sched_ptr;
+  uint64_t contended_ptr;
   bool sched_ready;
   BaseQuery * last_sched_dq;
   uint64_t curr_epoch;

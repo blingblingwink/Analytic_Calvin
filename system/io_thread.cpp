@@ -32,6 +32,7 @@
 #include "work_queue.h"
 #include "txn.h"
 #include "ycsb.h"
+#include "conflict_stats.h"
 
 void InputThread::setup() {
 
@@ -50,8 +51,8 @@ void InputThread::setup() {
 #if CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN
 				if(msg->rtype == CALVIN_ACK ||(msg->rtype == CL_QRY && ISCLIENTN(msg->get_return_id())) ||
 					(msg->rtype == CL_QRY_O && ISCLIENTN(msg->get_return_id()))) {
-	#if CC_ALG == ANALYTIC_CALVIN && QUERY_SPLIT
-					long_txn_split(msg);
+	#if CC_ALG == ANALYTIC_CALVIN && (QUERY_SPLIT || CONTENTION_CHECK)
+					txn_handle(msg);
 	#endif
 					work_queue.sequencer_enqueue(get_thd_id(),msg);
 					msgs->erase(msgs->begin());
@@ -59,7 +60,22 @@ void InputThread::setup() {
 				}
 				if( msg->rtype == RDONE || msg->rtype == CL_QRY || msg->rtype == SUB_CL_QRY || msg->rtype == CL_QRY_O) {
 					assert(ISSERVERN(msg->get_return_id()));
-					work_queue.sched_enqueue(get_thd_id(),msg);
+	#if CC_ALG == ANALYTIC_CALVIN && CONTENTION_CHECK
+				if (msg->rtype == RDONE) {
+					work_queue.sched_enqueue(get_thd_id(), msg);
+					// duplicate RDONE is needed to ensure contended_queue progresses smoothly
+					msg = Message::create_message(RDONE);
+					work_queue.contended_enqueue(get_thd_id(), msg);
+				} else {
+					if (static_cast<ClientQueryMessage*>(msg)->is_high_contended) {
+						work_queue.contended_enqueue(get_thd_id(), msg);
+					} else {
+						work_queue.sched_enqueue(get_thd_id(), msg);
+					}
+				}
+	#else
+				work_queue.sched_enqueue(get_thd_id(), msg);
+	#endif
 					msgs->erase(msgs->begin());
 					continue;
 				}
@@ -183,8 +199,8 @@ RC InputThread::server_recv_loop() {
 #if CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN
 			if(msg->rtype == CALVIN_ACK ||(msg->rtype == CL_QRY && ISCLIENTN(msg->get_return_id())) ||
 			(msg->rtype == CL_QRY_O && ISCLIENTN(msg->get_return_id()))) {
-	#if CC_ALG == ANALYTIC_CALVIN && QUERY_SPLIT
-				long_txn_split(msg);
+	#if CC_ALG == ANALYTIC_CALVIN && (QUERY_SPLIT || CONTENTION_CHECK)
+				txn_handle(msg);
 	#endif
 				work_queue.sequencer_enqueue(get_thd_id(),msg);
 				msgs->erase(msgs->begin());
@@ -192,7 +208,22 @@ RC InputThread::server_recv_loop() {
 			}
 			if( msg->rtype == RDONE || msg->rtype == CL_QRY || msg->rtype == SUB_CL_QRY || msg->rtype == CL_QRY_O) {
 				assert(ISSERVERN(msg->get_return_id()));
-				work_queue.sched_enqueue(get_thd_id(),msg);
+	#if CC_ALG == ANALYTIC_CALVIN && CONTENTION_CHECK
+				if (msg->rtype == RDONE) {
+					work_queue.sched_enqueue(get_thd_id(), msg);
+					// duplicate RDONE is needed to ensure contended_queue progresses smoothly
+					msg = Message::create_message(RDONE);
+					work_queue.contended_enqueue(get_thd_id(), msg);
+				} else {
+					if (static_cast<ClientQueryMessage*>(msg)->is_high_contended) {
+						work_queue.contended_enqueue(get_thd_id(), msg);
+					} else {
+						work_queue.sched_enqueue(get_thd_id(), msg);
+					}
+				}
+	#else
+				work_queue.sched_enqueue(get_thd_id(), msg);
+	#endif
 				msgs->erase(msgs->begin());
 				continue;
 			}
@@ -209,10 +240,25 @@ RC InputThread::server_recv_loop() {
 	return FINISH;
 }
 
-void InputThread::long_txn_split(Message *msg) {
-	if (msg->rtype != CL_QRY || static_cast<YCSBClientQueryMessage*>(msg)->requests.size() < g_long_req_per_query) {
+void InputThread::txn_handle(Message *msg) {
+	if (msg->rtype != CL_QRY) {
 		return;
+	}  
+	auto msg_for_ease = static_cast<YCSBClientQueryMessage*>(msg);
+	if (msg_for_ease->requests.size() == g_short_req_per_query) {
+#if CONTENTION_CHECK
+		conflict_stats_man.mark_contention(msg);
+#endif
+	} else {
+#if QUERY_SPLIT
+		long_txn_split(msg);
+#else
+		conflict_stats_man.mark_contention(msg);
+#endif
 	}
+}
+
+void InputThread::long_txn_split(Message *msg) {
 
 	auto start_time = get_sys_clock();
 
@@ -224,6 +270,9 @@ void InputThread::long_txn_split(Message *msg) {
 	size_t start = 0;
 	while (start < g_long_req_per_query) {
 		Message *submsg = Message::create_submessage(msg, start, start + g_short_req_per_query, pNum);
+#if CONTENTION_CHECK
+		conflict_stats_man.mark_contention(submsg);
+#endif
 		msg_for_ease->pSubmsgs->push_back(submsg);
 		start += g_short_req_per_query;
 	}

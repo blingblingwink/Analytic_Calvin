@@ -26,14 +26,17 @@ void QWorkQueue::init() {
 
 	last_sched_dq = NULL;
 	sched_ptr = 0;
+	contended_ptr = 0;
 
 	seq_queue = new boost::lockfree::queue<work_queue_entry* > (0);
 	work_queue = new boost::lockfree::queue<work_queue_entry* > (0);
 	new_txn_queue = new boost::lockfree::queue<work_queue_entry* >(0);
 	sched_queue = new boost::lockfree::queue<work_queue_entry* > * [g_node_cnt];
+	contended_queue = new boost::lockfree::queue<Message* > * [g_node_cnt];
 	sched_ready = true;
 	for ( uint64_t i = 0; i < g_node_cnt; i++) {
 		sched_queue[i] = new boost::lockfree::queue<work_queue_entry* > (0);
+		contended_queue[i] = new boost::lockfree::queue<Message* > (0);
 	}
 
 	txn_queue_size = 0;
@@ -178,8 +181,9 @@ Message * QWorkQueue::sched_dequeue(uint64_t thd_id) {
 		if(msg->rtype == RDONE) {
 			sched_ptr = (sched_ptr + 1) % g_node_cnt;
 			ATOM_CAS(sched_ready, false, true);
-			msg->release();
-			msg = NULL;
+			// msg->release();
+			// delete msg;
+			// msg = NULL;
 		} else {
 			ATOM_CAS(sched_ready, false, true);
 		}
@@ -193,6 +197,37 @@ Message * QWorkQueue::sched_dequeue(uint64_t thd_id) {
 		ATOM_CAS(sched_ready, false, true);
 	}
 #endif
+	return msg;
+}
+
+void QWorkQueue::contended_enqueue(uint64_t thd_id, Message *msg) {
+	assert(msg);
+	assert(ISSERVERN(msg->return_node_id));
+	uint64_t starttime = get_sys_clock();
+
+	uint64_t mtx_time_start = get_sys_clock();
+	while (!contended_queue[msg->get_return_id()]->push(msg) && !simulation->is_done()) {
+	}
+	INC_STATS(thd_id,mtx[37], get_sys_clock() - mtx_time_start);
+
+	INC_STATS(thd_id, sched_queue_enqueue_time, get_sys_clock() - starttime);
+	INC_STATS(thd_id, sched_queue_enq_cnt, 1);
+}
+
+Message * QWorkQueue::contended_dequeue(uint64_t thd_id) {
+	uint64_t starttime = get_sys_clock();
+
+	Message * msg = NULL;
+	if (contended_queue[contended_ptr]->pop(msg)) {
+		INC_STATS(thd_id, sched_queue_cnt, 1);
+		if(msg->rtype == RDONE) {
+			// Advance to next queue or next epoch
+			contended_ptr = (contended_ptr + 1) % g_node_cnt;
+		}
+		INC_STATS(thd_id, sched_queue_dequeue_time, get_sys_clock() - starttime);
+	} else {
+		msg = NULL;
+	}
 	return msg;
 }
 

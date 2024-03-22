@@ -29,6 +29,7 @@ public:
   RC  server_recv_loop();
   void  check_for_init_done();
   void setup();
+  void txn_handle(Message *msg);
   void long_txn_split(Message *msg);
 
   TxnManager * txn_man;

@@ -12,13 +12,13 @@ void Conflict_Stats::init() {
 void Conflict_Stats::mark_contention(Message *msg) {
     auto msg_for_ease = static_cast<YCSBClientQueryMessage*>(msg);
     auto reqs = msg_for_ease->requests;
-    size_t sz = reqs.size();
-    uint8_t num = 0;
+    uint16_t num = 0;
+    uint16_t contended_bound = reqs.size() * contention_check_perc;
     msg_for_ease->is_high_contended = false;
-    for (size_t i = 0; i < sz; i++) {
+    for (size_t i = 0; i < reqs.size(); i++) {
         if (is_high_conflict[key_to_partition(reqs[i]->key)].load(memory_order_relaxed)) {
             num++;
-            if (2 * num >= sz) {
+            if (num >= contended_bound) {
                 msg_for_ease->is_high_contended = true;
                 break;
             }

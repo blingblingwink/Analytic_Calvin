@@ -17,6 +17,7 @@ private:
     static constexpr uint64_t conflict_partition_size{CONFLICT_PARTITION_SIZE};
     static constexpr uint64_t conflict_lower_bound{LOWER_BOUND};
     static constexpr uint64_t conflict_upper_bound{UPPER_BOUND};
+    static constexpr double contention_check_perc{CONTENTION_CHECK_PERC};
     static constexpr uint64_t Npartition{SYNTH_TABLE_SIZE / conflict_partition_size + NODE_CNT};
     std::array<std::atomic<uint64_t>, Npartition> pStats;
     std::array<std::atomic<bool>, Npartition> is_high_conflict;

@@ -209,8 +209,7 @@
 // [ANALYTIC_CALVIN]
 #define CONTENTION_CHECK false
 #define CONFLICT_PARTITION_SIZE 10000
-#define LOWER_BOUND 5000
-#define UPPER_BOUND 8000
+#define CONTENTION_CHECK_PERC 0.7
 /***********************************************/
 // Logging
 /***********************************************/
