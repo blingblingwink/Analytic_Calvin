@@ -228,7 +228,7 @@ Message * Message::create_message(RemReqType rtype) {
 Message* Message::init_submessage() {
   auto msg = create_message(SUB_CL_QRY);
   // Array partitions is not used under Analytic_Calvin
-  static_cast<YCSBSubClientQueryMessage*>(msg)->requests.init(g_short_req_per_query);
+  static_cast<YCSBSubClientQueryMessage*>(msg)->requests.init(g_long_req_per_query);
   return msg;
 }
 

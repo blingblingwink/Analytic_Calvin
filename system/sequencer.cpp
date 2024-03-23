@@ -358,7 +358,13 @@ void Sequencer::send_next_batch(uint64_t thd_id) {
 }
 
 void Sequencer::process_long_txn(Message *msg, uint64_t thd_id) {
-	auto pSubmsgs = static_cast<YCSBClientQueryMessage*>(msg)->pSubmsgs;
+	auto pSubmsgs = static_cast<ClientQueryMessage*>(msg)->pSubmsgs;
+	if (pSubmsgs == NULL) {
+		// this long txn is not splitted
+		process_txn(msg, thd_id, 0, 0, 0, 0);
+		return;
+	}
+	
 	auto vecSubmsgs = *(pSubmsgs);
 	for (auto item: vecSubmsgs) {
 		process_txn(item, thd_id, 0, 0, 0, 0);

@@ -259,10 +259,35 @@ void InputThread::txn_handle(Message *msg) {
 }
 
 void InputThread::long_txn_split(Message *msg) {
+	static const uint64_t split_lower_bound = g_short_req_per_query;
+	static const uint64_t split_upper_bound = g_long_req_per_query - g_short_req_per_query;
 
 	auto start_time = get_sys_clock();
 
 	auto msg_for_ease = static_cast<YCSBClientQueryMessage*>(msg);
+
+	uint64_t Ncontended = conflict_stats_man.adjust_long_query(msg);
+	if (Ncontended < split_lower_bound || Ncontended > split_upper_bound) {	// no splitting to avoid inducing tiny splitted part
+		msg_for_ease->pSubmsgs = NULL;
+		if (Ncontended < split_lower_bound) {
+			msg_for_ease->is_high_contended = false;
+		} else {
+			msg_for_ease->is_high_contended = true;
+		}
+	} else {
+		msg_for_ease->pSubmsgs = new std::vector<Message*>();	// vector used for recording sub msgs
+		auto pNum = new uint8_t{2};	// one is contended txn, the other one is normal txn
+
+		Message *submsg = Message::create_submessage(msg, 0, Ncontended, pNum);
+		static_cast<ClientQueryMessage*>(submsg)->is_high_contended = true;
+		msg_for_ease->pSubmsgs->push_back(submsg);
+
+		submsg = Message::create_submessage(msg, Ncontended, g_long_req_per_query, pNum);
+		static_cast<ClientQueryMessage*>(submsg)->is_high_contended = false;
+		msg_for_ease->pSubmsgs->push_back(submsg);
+	}
+
+#if EVEN_SPLIT
 	uint8_t Nsubmsg = g_long_req_per_query / g_short_req_per_query;	// number of sub msgs
 	msg_for_ease->pSubmsgs = new std::vector<Message*>();	// vector used for recording sub msgs
 	auto pNum = new uint8_t{Nsubmsg};
@@ -276,6 +301,7 @@ void InputThread::long_txn_split(Message *msg) {
 		msg_for_ease->pSubmsgs->push_back(submsg);
 		start += g_short_req_per_query;
 	}
+#endif
 	INC_STATS(_thd_id, split_time, get_sys_clock() - start_time);
 }
 

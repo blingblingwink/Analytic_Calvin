@@ -278,6 +278,7 @@ public:
   bool is_high_contended;
   uint64_t first_startts;
   Array<uint64_t> partitions;
+  std::vector<Message*> *pSubmsgs;
 };
 
 class YCSBClientQueryMessage : public ClientQueryMessage {
@@ -292,7 +293,6 @@ public:
   void release();
 
   Array<ycsb_request*> requests;
-  std::vector<Message*> *pSubmsgs;
 
 };
 

@@ -9,6 +9,28 @@ void Conflict_Stats::init() {
     }
 }
 
+uint64_t Conflict_Stats::adjust_long_query(Message *msg) {
+    auto reqs = static_cast<YCSBClientQueryMessage*>(msg)->requests;
+    size_t i = 0, j = reqs.size() - 1;
+    while (i <= j) {
+        if (is_high_conflict[key_to_partition(reqs[i]->key)].load(memory_order_relaxed)) {
+            i++;
+        } else {
+            while (i < j && is_high_conflict[key_to_partition(reqs[j]->key)].load(memory_order_relaxed) == false) {
+                j--;
+            }
+            if (i < j) {
+                reqs.swap(i, j);
+                i++;
+                j--;
+            } else {
+                break;
+            }
+        }
+    }
+    return i;   // number of contended requests
+}
+
 void Conflict_Stats::mark_contention(Message *msg) {
     auto msg_for_ease = static_cast<YCSBClientQueryMessage*>(msg);
     auto reqs = msg_for_ease->requests;

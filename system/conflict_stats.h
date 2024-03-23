@@ -7,6 +7,7 @@
 class Conflict_Stats {
 public:
     void init();
+    uint64_t adjust_long_query(Message *msg);
     void mark_contention(Message *msg);
     void update_conflict_value(row_t * row);
     void update_conflict_state();
