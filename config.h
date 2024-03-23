@@ -105,7 +105,7 @@
 #define TIME_ENABLE         true //STATS_ENABLE
 
 #define FIN_BY_TIME true
-#define MAX_TXN_IN_FLIGHT 10000
+#define MAX_TXN_IN_FLIGHT 1000
 
 #define SERVER_GENERATE_QUERIES false
 
@@ -207,7 +207,8 @@
 #define PRE_ABORT2					"true"
 #define ATOMIC_WORD					false
 // [ANALYTIC_CALVIN]
-#define CONTENTION_CHECK false
+#define QUERY_SPLIT true
+#define CONTENTION_CHECK true
 #define CONFLICT_PARTITION_SIZE 10000
 #define LOWER_BOUND 80000
 #define UPPER_BOUND 90000
