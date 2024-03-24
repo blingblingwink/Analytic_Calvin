@@ -302,6 +302,9 @@ BaseQuery * YCSBQueryGenerator::gen_requests_zipf(uint64_t home_partition_id, Wo
 	YCSBQuery * query = (YCSBQuery*) mem_allocator.alloc(sizeof(YCSBQuery));
 	new(query) YCSBQuery();
 
+	double r_logical_abortable = (double)(mrand->next() % 10000) / 10000;
+	query->is_logical_abortable = r_logical_abortable < logical_abort_perc? true: false;
+
 	double r_long_txn = (double)(mrand->next() % 10000) / 10000;
 	uint32_t req_per_query = r_long_txn < g_long_txn_perc? g_long_req_per_query: g_short_req_per_query;
 	query->requests.init(req_per_query);

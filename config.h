@@ -214,6 +214,8 @@
 #define UPPER_BOUND 90000
 #define CONTENTION_CHECK_PERC 0.7
 #define FETCH_FAIL_MOD 10
+#define EARLY_RELEASE true
+#define LOGICAL_ABORT_PREC 0.1
 /***********************************************/
 // Logging
 /***********************************************/

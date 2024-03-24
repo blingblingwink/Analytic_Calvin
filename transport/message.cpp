@@ -240,6 +240,7 @@ Message* Message::create_submessage(Message *original_msg, size_t start, size_t 
 
   // record information of the original msg
   msg_for_ease->return_node_id = original_msg->return_node_id;
+  msg_for_ease->is_logical_abortable = false;
 
   for (size_t i = start; i < end; i++) {
     msg_for_ease->requests.add(requests_for_ease[i]);
@@ -997,6 +998,7 @@ uint64_t ClientQueryMessage::get_size() {
   uint64_t size = sizeof(ClientQueryMessage);
   */
   size += sizeof(bool);
+  size += sizeof(bool);
   size += sizeof(size_t);
   size += sizeof(uint64_t) * partitions.size();
   return size;
@@ -1005,6 +1007,7 @@ uint64_t ClientQueryMessage::get_size() {
 void ClientQueryMessage::copy_from_query(BaseQuery * query) {
   partitions.clear();
   partitions.copy(query->partitions);
+  is_logical_abortable = query->is_logical_abortable;
 }
 
 void ClientQueryMessage::copy_from_txn(TxnManager * txn) {
@@ -1022,6 +1025,7 @@ void ClientQueryMessage::copy_to_txn(TxnManager * txn) {
   txn->query->partitions.append(partitions);
   txn->client_startts = client_startts;
   txn->client_id = return_node_id;
+  txn->query->is_logical_abortable = is_logical_abortable;
 }
 
 void ClientQueryMessage::copy_from_buf(char * buf) {
@@ -1030,6 +1034,7 @@ void ClientQueryMessage::copy_from_buf(char * buf) {
   //COPY_VAL(ts,buf,ptr);
   COPY_VAL(client_startts,buf,ptr);
   COPY_VAL(is_high_contended, buf, ptr);
+  COPY_VAL(is_logical_abortable, buf, ptr);
   size_t size;
   COPY_VAL(size,buf,ptr);
   partitions.init(size);
@@ -1047,6 +1052,7 @@ void ClientQueryMessage::copy_to_buf(char * buf) {
   //COPY_BUF(buf,ts,ptr);
   COPY_BUF(buf,client_startts,ptr);
   COPY_BUF(buf, is_high_contended, ptr);
+  COPY_BUF(buf, is_logical_abortable, ptr);
   size_t size = partitions.size();
   COPY_BUF(buf,size,ptr);
   for(uint64_t i = 0; i < size; i++) {

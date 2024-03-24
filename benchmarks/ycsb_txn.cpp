@@ -253,6 +253,13 @@ RC YCSBTxnManager::run_ycsb_1(access_t acctype, row_t * row_local) {
     release_last_row_lock();
 #endif
   }
+
+#if CC_ALG == ANALYTIC_CALVIN && EARLY_RELEASE
+  if (this->query->is_logical_abortable == false) {
+    release_last_row_lock();
+  }
+#endif
+
   INC_STATS(get_thd_id(),trans_benchmark_compute_time,get_sys_clock() - starttime);
   return RCOK;
 }

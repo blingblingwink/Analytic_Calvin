@@ -262,6 +262,12 @@ void InputThread::long_txn_split(Message *msg) {
 	auto start_time = get_sys_clock();
 
 	auto msg_for_ease = static_cast<YCSBClientQueryMessage*>(msg);
+	
+	if (msg_for_ease->is_logical_abortable) {
+		msg_for_ease->pSubmsgs = NULL;
+		conflict_stats_man.mark_contention(msg);
+		return;
+	}
 
 	uint64_t Ncontended_req = conflict_stats_man.adjust_long_query(msg);
 	if (Ncontended_req < g_short_req_per_query) {

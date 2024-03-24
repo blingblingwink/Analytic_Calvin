@@ -883,10 +883,19 @@ void TxnManager::cleanup(RC rc) {
 #endif
 #if CC_ALG == CALVIN || CC_ALG == ANALYTIC_CALVIN
 	// cleanup locked rows
+#if CC_ALG == ANALYTIC_CALVIN && EARLY_RELEASE
+	if (this->query->is_logical_abortable) {
+		for (uint64_t i = 0; i < calvin_locked_rows.size(); i++) {
+			row_t * row = calvin_locked_rows[i];
+			row->return_row(rc,RD,this,row);
+		}
+	}
+#else
 	for (uint64_t i = 0; i < calvin_locked_rows.size(); i++) {
 		row_t * row = calvin_locked_rows[i];
 		row->return_row(rc,RD,this,row);
 	}
+#endif
 #endif
 
 #if CC_ALG == DTA

@@ -73,6 +73,7 @@ def ycsb_scaling():
     algos=['ANALYTIC_CALVIN']
     is_split = ["true"]
     contention_check = ["true"]
+    early_release = ["true"]
     base_table_size=1048576*8
     txn_write_perc = [1.0]
     tup_write_perc = [0.2]
@@ -84,10 +85,10 @@ def ycsb_scaling():
     scnt = [2]
     rcnt = [2]
     skew = [0.9]
-    fmt = ["WORKLOAD","NODE_CNT","CC_ALG","SYNTH_TABLE_SIZE","QUERY_SPLIT","CONTENTION_CHECK","TUP_WRITE_PERC","TXN_WRITE_PERC","LONG_TXN_PERC","MAX_TXN_IN_FLIGHT","ZIPF_THETA","SCHEDULER_THREAD_CNT","THREAD_CNT","CLIENT_THREAD_CNT","SEND_THREAD_CNT","REM_THREAD_CNT","CLIENT_SEND_THREAD_CNT","CLIENT_REM_THREAD_CNT"]
-    exp = [[wl,n,algo,base_table_size*n,split_switch,contention_switch,tup_wr_perc,txn_wr_perc,long_perc,ld,sk,schedthr,thr,cthr,sthr,rthr,sthr,rthr] \
-           for split_switch,contention_switch,schedthr,thr,cthr,sthr,rthr,txn_wr_perc,tup_wr_perc,long_perc,sk,ld,n,algo in \
-           itertools.product(is_split,contention_check,sched_cnt,tcnt,ctcnt,scnt,rcnt,txn_write_perc,tup_write_perc,long_txn_perc,skew,load,nnodes,algos)]
+    fmt = ["WORKLOAD","NODE_CNT","CC_ALG","SYNTH_TABLE_SIZE","QUERY_SPLIT","CONTENTION_CHECK","EARLY_RELEASE","TUP_WRITE_PERC","TXN_WRITE_PERC","LONG_TXN_PERC","MAX_TXN_IN_FLIGHT","ZIPF_THETA","SCHEDULER_THREAD_CNT","THREAD_CNT","CLIENT_THREAD_CNT","SEND_THREAD_CNT","REM_THREAD_CNT","CLIENT_SEND_THREAD_CNT","CLIENT_REM_THREAD_CNT"]
+    exp = [[wl,n,algo,base_table_size*n,split_switch,contention_switch,early_switch,tup_wr_perc,txn_wr_perc,long_perc,ld,sk,schedthr,thr,cthr,sthr,rthr,sthr,rthr] \
+           for split_switch,contention_switch,early_switch,schedthr,thr,cthr,sthr,rthr,txn_wr_perc,tup_wr_perc,long_perc,sk,ld,n,algo in \
+           itertools.product(is_split,contention_check,early_release,sched_cnt,tcnt,ctcnt,scnt,rcnt,txn_write_perc,tup_write_perc,long_txn_perc,skew,load,nnodes,algos)]
     return fmt,exp
 
 def ycsb_scaling1():

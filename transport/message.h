@@ -276,6 +276,7 @@ public:
 #endif
   uint64_t client_startts;
   bool is_high_contended;
+  bool is_logical_abortable;
   uint64_t first_startts;
   Array<uint64_t> partitions;
   std::vector<Message*> *pSubmsgs;

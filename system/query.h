@@ -42,6 +42,7 @@ public:
     Array<uint64_t> partitions_touched;
     Array<uint64_t> active_nodes;
     Array<uint64_t> participant_nodes;
+    bool is_logical_abortable;
 
 };
 
@@ -49,6 +50,7 @@ class QueryGenerator {
 public:
     virtual ~QueryGenerator() {}
     virtual BaseQuery * create_query(Workload * h_wl, uint64_t home_partition_id) = 0;
+    static constexpr double logical_abort_perc{LOGICAL_ABORT_PREC};
 };
 
 // All the queries for a particular thread.
