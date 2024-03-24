@@ -259,36 +259,40 @@ void InputThread::txn_handle(Message *msg) {
 }
 
 void InputThread::long_txn_split(Message *msg) {
-	static const uint64_t split_lower_bound = g_short_req_per_query;
-	static const uint64_t split_upper_bound = g_long_req_per_query - g_short_req_per_query;
-
 	auto start_time = get_sys_clock();
 
 	auto msg_for_ease = static_cast<YCSBClientQueryMessage*>(msg);
 
 	uint64_t Ncontended_req = conflict_stats_man.adjust_long_query(msg);
-	if (Ncontended_req < split_lower_bound || Ncontended_req > split_upper_bound) {	// no splitting to avoid inducing tiny splitted part
+	if (Ncontended_req < g_short_req_per_query) {
 		msg_for_ease->pSubmsgs = NULL;
-		if (Ncontended_req < split_lower_bound) {
-			msg_for_ease->is_high_contended = false;
-			INC_STATS(0, Nuncontended, 1);
-		} else {
-			msg_for_ease->is_high_contended = true;
-			INC_STATS(0, Ncontended, 1);
-		}
-	} else {
-		msg_for_ease->pSubmsgs = new std::vector<Message*>();	// vector used for recording sub msgs
-		auto pNum = new uint8_t{2};	// one is contended txn, the other one is normal txn
-
-		Message *submsg = Message::create_submessage(msg, 0, Ncontended_req, pNum);
-		static_cast<ClientQueryMessage*>(submsg)->is_high_contended = true;
-		INC_STATS(0, Ncontended, 1);
-		msg_for_ease->pSubmsgs->push_back(submsg);
-
-		submsg = Message::create_submessage(msg, Ncontended_req, g_long_req_per_query, pNum);
-		static_cast<ClientQueryMessage*>(submsg)->is_high_contended = false;
+		msg_for_ease->is_high_contended = false;
 		INC_STATS(0, Nuncontended, 1);
-		msg_for_ease->pSubmsgs->push_back(submsg);
+	} else {
+		uint8_t Nsubmsg = 0;	// number of sub msgs
+		msg_for_ease->pSubmsgs = new std::vector<Message*>();	// vector used for recording sub msgs
+		auto pNum = new uint8_t;
+
+		size_t start = 0;
+		while (start < g_long_req_per_query) {
+			Nsubmsg++;
+			Message *submsg;
+			if (Ncontended_req >= g_short_req_per_query) {
+				submsg = Message::create_submessage(msg, start, start + g_short_req_per_query, pNum);
+				static_cast<ClientQueryMessage*>(submsg)->is_high_contended = true;
+				INC_STATS(0, Ncontended, 1);
+				start += g_short_req_per_query;
+				Ncontended_req -= g_short_req_per_query;
+			} else {
+				submsg = Message::create_submessage(msg, start, g_long_req_per_query, pNum);
+				static_cast<ClientQueryMessage*>(submsg)->is_high_contended = false;
+				INC_STATS(0, Nuncontended, 1);
+				start = g_long_req_per_query;
+			}
+
+			msg_for_ease->pSubmsgs->push_back(submsg);
+		}
+		*pNum = Nsubmsg;
 	}
 
 #if EVEN_SPLIT
