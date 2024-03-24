@@ -303,7 +303,7 @@ public:
 
 	int last_batch_id;
 	int last_txn_id;
-	Message* msg;
+	Message* msg;	// used for distinguishing client query and sub client query
 
 #if CC_ALG == DLI_MVCC || CC_ALG == DLI_MVCC_OCC || CC_ALG == DLI_DTA || CC_ALG == DLI_DTA2 || CC_ALG == DLI_DTA3 || \
 	CC_ALG == DLI_OCC
