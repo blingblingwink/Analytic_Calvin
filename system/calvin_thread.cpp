@@ -66,21 +66,13 @@ FetchType CalvinLockThread::fetch_msg_to_lock(Message *&msg) {
 
 bool CalvinLockThread::double_check(Message *&msg) {
 	failed_cnt++;
-	if (failed_cnt % failed_mod != 0 || watermarks[id] != min_watermark) {
+	uint64_t me = watermarks[id].load(memory_order_relaxed), 
+			min_val = min_watermark.load(memory_order_relaxed),
+			max_val = max_watermark.load(memory_order_relaxed); // this may happen when a batch of txns are all processed and no txns available for now
+	if (failed_cnt % failed_mod != 0 || me != min_val || me == max_val) {
 		return false;
 	}
 	// failed enough times to FORCE update its watermark and this locker is lagged behind
-
-	// find current max watermark
-	uint64_t cur_max_val = 0;
-	for (uint32_t i = 0; i < g_scheduler_thread_cnt; i++) {
-		cur_max_val = std::max(cur_max_val, watermarks[i].load(memory_order_acquire));
-	}
-
-	if (watermarks[id].load(memory_order_relaxed) == cur_max_val) {
-		// this may happen when a batch of txns are all processed and no txns available for now
-		return false;
-	}
 
 	/*
 		check again if it can fetch msg now, 
@@ -96,8 +88,7 @@ bool CalvinLockThread::double_check(Message *&msg) {
 	*/
 	auto res = fetch_msg_to_lock(msg);
 	if (res == EMPTY_MSG) {
-		assert(watermarks[id] == min_watermark);
-		watermarks[id].store(cur_max_val, memory_order_release);
+		watermarks[id].store(max_val, memory_order_release);
 		return false;
 	} else if (res == RDONE_MSG) {
 		return false;

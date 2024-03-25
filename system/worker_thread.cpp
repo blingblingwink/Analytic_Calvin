@@ -1080,10 +1080,13 @@ RC PendingHandleThread::run() {
 	while(!simulation->is_done()) {
     // usleep(10);
     uint64_t min_val = UINT64_MAX;
+    uint64_t max_val = 0;
     for (uint32_t i = 0; i < g_scheduler_thread_cnt; i++) {
       min_val = std::min(min_val, watermarks[i].load(memory_order_acquire));
+      max_val = std::max(max_val, watermarks[i].load(memory_order_relaxed));
     }
     min_watermark.store(min_val);
+    max_watermark.store(max_val, memory_order_release);
     // pick runnable txn from pending queue
     work_queue.pending_validate(_thd_id);
 	}

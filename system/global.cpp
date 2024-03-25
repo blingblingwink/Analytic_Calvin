@@ -111,6 +111,7 @@ then txn 1 is wrongly regarded as smallest txn_id
 */
 std::array<std::atomic<uint64_t>, SCHEDULER_THREAD_CNT> watermarks;
 std::atomic<uint64_t> min_watermark;
+std::atomic<uint64_t> max_watermark;
 #endif
 Conflict_Stats conflict_stats_man;
 boost::lockfree::queue<DAQuery*, boost::lockfree::fixed_sized<true>> da_query_queue{100};
